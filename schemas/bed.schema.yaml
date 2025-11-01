@@ -1,0 +1,35 @@
+# YAML schema for bed notes (front‑matter)
+
+type: bed
+required:
+  - id
+  - name
+  - location
+  - soil
+  - rotation_group
+properties:
+  id: string
+  name: string
+  location: string
+  size_m2: number             # optional
+  soil: string
+  rotation_group: [brassicas, legumes, roots, alliums, solanaceae, cucurbits, misc]
+  frost_context:
+    last_spring_frost: date
+  crops:                      # optional list
+    - crop: string
+      variety: string
+      sow_window:
+        outdoors: [mm-dd, mm-dd]  # strings, editable
+      harvest_window: [mm-dd, mm-dd]
+      sowed: date
+      notes: array[string]
+  care:
+    water:
+      check: [soil_surface+finger]
+      last: date
+    fertilise:
+      type: string
+      last: date
+  status: [active, dormant]
+  tags: array[string]

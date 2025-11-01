@@ -1,0 +1,55 @@
+# YAML schema for plant notes (front‑matter)
+# This is a descriptive schema for human use. Keys are required unless marked optional.
+
+type: plant
+required:
+  - id
+  - common
+  - acquired
+  - location
+  - light
+  - pot
+  - care
+  - status
+properties:
+  id: string
+  common: string
+  latin: string                # optional
+  acquired: date
+  location: string
+  light: [low, medium, bright-indirect, full-sun]
+  env:
+    humidity_pct: number       # optional
+    temp_c: number             # optional
+  pot:
+    diameter_mm: number
+    volume_l: number
+    medium: string
+  growth_phase: [auto, active, quiescent]
+  seasonal_overrides:          # optional list
+    - months: array[int]       # 1..12
+      water_factor: number     # e.g. 0.6 reduces frequency
+      fertilise: [pause, as-normal]
+  care:
+    water:
+      check: [finger, weight, meter, combo]
+      target_rule: [pot_10pct_or_runoff, soak-then-drain]
+      interval_days_hint: number
+      last: date               # optional until first logged
+      flush_salts_months: number # optional
+    fertilise:
+      during: [active_only, always, paused]
+      cadence: [monthly, every_watering_quarter_strength]
+      last: date               # optional
+      product: string
+    prune:
+      interval_days_hint: number # optional
+      last: date                 # optional
+    repot:
+      last: date                 # optional
+      guidance: [spring_preferred]
+  status: [active, dormant, gifted, dead]
+  water_quality:
+    rest_tap_24h: boolean       # optional
+  drought_stressed: boolean     # optional
+  tags: array[string]

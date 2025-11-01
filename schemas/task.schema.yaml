@@ -1,0 +1,14 @@
+# YAML schema for plant task notes (front‑matter)
+
+type: plant-task
+required:
+  - plant_id
+  - action
+  - performed
+properties:
+  plant_id: string
+  action: [water, fertilise, prune, repot, custom]
+  performed: datetime
+  method: string           # optional e.g. pot_10pct_or_runoff
+  amount_note: string      # optional free text
+  note: string             # optional

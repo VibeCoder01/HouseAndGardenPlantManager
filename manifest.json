@@ -1,0 +1,10 @@
+{
+  "id": "houseplant-garden-manager",
+  "name": "Houseplant & Garden Manager",
+  "version": "0.0.1",
+  "minAppVersion": "1.5.0",
+  "description": "Manage houseplants and garden beds with moisture-led care and simple rotation planning.",
+  "author": "Your Team",
+  "authorUrl": "https://example.com",
+  "isDesktopOnly": false
+}
