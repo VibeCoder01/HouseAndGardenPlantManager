@@ -17,6 +17,7 @@ House and Garden Plant Manager is an offline-first Obsidian plugin that helps yo
 | Command | Description |
 | ------- | ----------- |
 | Plant: New plant | Creates a plant note using the configured template, substituting the ID, name, and today’s date. |
+| Garden: New bed | Creates a garden bed note using the configured template, prompting for name, location, soil, and rotation group. |
 | Plant: Log water / Log feed | Updates the plant front matter, appends a task log note, and refreshes the Today view. Feeding honours winter and drought safeguards. |
 | Plant: Snooze task | Pushes the next watering hint forward by the number of days you provide. |
 | Plant: Calibrate pot weight | Stores wet and ready-to-water weights for the active plant. |
@@ -75,6 +76,7 @@ Open *Settings → Community plugins → HaG-PM* to review every control. The se
 | **Garden bed folder** | Destination for garden bed notes. Used by the crop template command. |
 | **Task log folder** | Where watering and fertilising logs are stored. Each log creates an individual markdown note in this folder. |
 | **Plant template path** | Path to the markdown template used by **Plant: New plant**. The template should include the YAML front matter defined in [`Templates/plant.md`](Templates/plant.md). |
+| **Garden bed template path** | Path to the markdown template used by **Garden: New bed**. Provide a markdown file similar to [`Templates/bed.md`](Templates/bed.md). |
 
 ### Seasonal references
 

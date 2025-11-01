@@ -48,6 +48,23 @@ status: active
 # {{common}}
 `;
 
+const FALLBACK_BED_TEMPLATE = `---
+id: {{id}}
+type: bed
+name: {{name}}
+location: {{location}}
+{{size_line}}soil: {{soil}}
+rotation_group: {{rotation_group}}
+frost_context:
+  last_spring_frost: {{last_spring_frost}}
+status: active
+tags: [garden]
+---
+# {{name}}
+
+## Notes
+`;
+
 type PotChoice = { name?: string; diameter_mm: number; volume_l: number; medium: string };
 
 const ROTATION_FAMILIES = [
@@ -75,6 +92,14 @@ export default class HouseplantGardenPlugin extends Plugin {
       name: "Plant: New plant",
       callback: async () => {
         await this.createPlant();
+      },
+    });
+
+    this.addCommand({
+      id: "pgm-new-bed",
+      name: "Garden: New bed",
+      callback: async () => {
+        await this.createBed();
       },
     });
 
@@ -236,6 +261,90 @@ export default class HouseplantGardenPlugin extends Plugin {
     await this.refreshTodayView();
   }
 
+  /** Create a new garden bed note from template. */
+  async createBed() {
+    const name = await this.promptNonEmpty("Bed name?", "", "Enter a bed name.");
+    if (name === null) return;
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    const id = slug ? `bed-${slug}` : `bed-${todayYMD()}`;
+
+    const location = await this.promptNonEmpty("Where is the bed located?", "Garden", "Enter a location.");
+    if (location === null) return;
+
+    const soil = await this.promptNonEmpty("Soil description?", "loam", "Enter a soil description.");
+    if (soil === null) return;
+
+    const rotationGroup = await selectFromList(
+      this.app,
+      "Rotation group",
+      ROTATION_FAMILIES,
+      "misc",
+    );
+    if (!rotationGroup) return;
+
+    let sizeValue: number | undefined;
+    while (true) {
+      const sizeInput = await this.prompt("Bed size (m²)? Leave blank to skip.", sizeValue ? String(sizeValue) : "");
+      if (sizeInput === null) return;
+      const trimmed = sizeInput.trim();
+      if (!trimmed) {
+        sizeValue = undefined;
+        break;
+      }
+      const parsed = Number(trimmed);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        new Notice("Enter a valid bed size in square metres or leave blank.");
+        continue;
+      }
+      sizeValue = Number(parsed.toFixed(2));
+      break;
+    }
+
+    const defaultFrost = this.settings.default_frost_dates.last_spring_frost;
+    let frostDate = defaultFrost;
+    while (true) {
+      const frostInput = await this.prompt(
+        "Last spring frost date? (YYYY-MM-DD)",
+        frostDate,
+      );
+      if (frostInput === null) return;
+      const trimmed = frostInput.trim();
+      if (!trimmed) {
+        frostDate = defaultFrost;
+        break;
+      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        frostDate = trimmed;
+        break;
+      }
+      new Notice("Enter a date in YYYY-MM-DD format or leave blank for the default.");
+    }
+
+    const replacements = {
+      id,
+      name,
+      location,
+      soil,
+      rotation_group: rotationGroup,
+      last_spring_frost: frostDate,
+      size_line: sizeValue !== undefined ? `size_m2: ${sizeValue}\n` : "",
+    };
+
+    const template = await this.resolveTemplateContent(
+      this.settings.templates.bed,
+      FALLBACK_BED_TEMPLATE,
+      replacements,
+    );
+
+    const filePath = `${this.settings.folders.beds}/${name}.md`;
+    const alreadyExists = await this.app.vault.adapter.exists(filePath).catch(() => false);
+    const file = await ensureFile(this.app.vault, filePath, template);
+    if (alreadyExists) {
+      new Notice("Garden bed note already existed; opened existing file.");
+    }
+    await this.app.workspace.getLeaf(true).openFile(file);
+  }
+
   private async choosePotForNewPlant(): Promise<PotChoice | null> {
     const stored = this.settings.pot_presets;
     const presets = Array.isArray(stored) ? stored : DEFAULT_POT_PRESETS;
@@ -258,45 +367,75 @@ export default class HouseplantGardenPlugin extends Plugin {
   }
 
   private async promptCustomPot(defaults?: PotPreset): Promise<PotChoice | null> {
-    const diameterStr = await this.prompt(
+    const diameter = await this.promptPositiveNumber(
       "Pot diameter (mm)?",
-      defaults ? String(defaults.diameter_mm) : "120",
+      defaults?.diameter_mm ?? 120,
+      "Enter a valid pot diameter in millimetres.",
     );
-    if (!diameterStr) return null;
-    const diameter = Number(diameterStr);
-    if (!Number.isFinite(diameter) || diameter <= 0) {
-      new Notice("Enter a valid pot diameter in millimetres.");
-      return null;
-    }
+    if (diameter === null) return null;
 
-    const volumeStr = await this.prompt(
+    const volume = await this.promptPositiveNumber(
       "Pot volume (litres)?",
-      defaults ? String(defaults.volume_l) : "1",
+      defaults?.volume_l ?? 1,
+      "Enter a valid pot volume in litres.",
     );
-    if (!volumeStr) return null;
-    const volume = Number(volumeStr);
-    if (!Number.isFinite(volume) || volume <= 0) {
-      new Notice("Enter a valid pot volume in litres.");
-      return null;
-    }
+    if (volume === null) return null;
 
-    const medium = await this.prompt(
+    const medium = await this.promptNonEmpty(
       "Potting medium mix?",
       defaults?.medium ?? "peat-free_multipurpose+perlite",
+      "Enter a potting medium description.",
     );
     if (medium === null) return null;
-    const trimmedMedium = medium.trim();
-    if (!trimmedMedium) {
-      new Notice("Enter a potting medium description.");
-      return null;
-    }
 
     return {
       name: defaults?.name ?? "Custom pot",
       diameter_mm: Math.round(diameter),
       volume_l: Number(volume.toFixed(2)),
-      medium: trimmedMedium,
+      medium,
     };
+  }
+
+  private async promptPositiveNumber(
+    message: string,
+    initial: number,
+    errorNotice: string,
+  ): Promise<number | null> {
+    let current = String(initial);
+    while (true) {
+      const input = await this.prompt(message, current);
+      if (input === null) return null;
+      const trimmed = input.trim();
+      if (!trimmed) {
+        new Notice(errorNotice);
+        continue;
+      }
+      const value = Number(trimmed);
+      if (!Number.isFinite(value) || value <= 0) {
+        new Notice(errorNotice);
+        continue;
+      }
+      return value;
+    }
+  }
+
+  private async promptNonEmpty(
+    message: string,
+    initial: string,
+    errorNotice: string,
+  ): Promise<string | null> {
+    let current = initial;
+    while (true) {
+      const input = await this.prompt(message, current);
+      if (input === null) return null;
+      const trimmed = input.trim();
+      if (!trimmed) {
+        new Notice(errorNotice);
+        current = initial;
+        continue;
+      }
+      return trimmed;
+    }
   }
 
   /** Guarded log action for plant in active editor. */

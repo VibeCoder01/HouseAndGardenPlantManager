@@ -94,7 +94,7 @@ export interface PluginSettings {
   rotation_gap_years: number;
   default_frost_dates: { last_spring_frost: string };
   folders: { plants: string; beds: string; tasks: string };
-  templates: { plant: string };
+  templates: { plant: string; bed: string };
   pot_presets: PotPreset[];
   calibration: Record<string, WeightCalibration>;
 }

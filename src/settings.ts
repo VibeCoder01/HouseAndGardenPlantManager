@@ -33,7 +33,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   rotation_gap_years: 3,
   default_frost_dates: { last_spring_frost: "2025-04-10" },
   folders: { plants: "Plants", beds: "GardenBeds", tasks: "PlantTasks" },
-  templates: { plant: "Templates/plant.md" },
+  templates: { plant: "Templates/plant.md", bed: "Templates/bed.md" },
   pot_presets: DEFAULT_POT_PRESETS,
   calibration: {},
 };
@@ -103,9 +103,28 @@ export class SettingsTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Plant template path")
       .setDesc("Used when generating a new plant note. Provide a Markdown template file.")
-      .addText((t) => t.setPlaceholder("Templates/plant.md").setValue(this.plugin.settings.templates.plant).onChange(async (v) => {
-        this.plugin.settings.templates.plant = v || "Templates/plant.md"; await this.plugin.saveSettings();
-      }));
+      .addText((t) =>
+        t
+          .setPlaceholder("Templates/plant.md")
+          .setValue(this.plugin.settings.templates.plant)
+          .onChange(async (v) => {
+            this.plugin.settings.templates.plant = v || "Templates/plant.md";
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("Garden bed template path")
+      .setDesc("Used when generating a new garden bed note. Provide a Markdown template file.")
+      .addText((t) =>
+        t
+          .setPlaceholder("Templates/bed.md")
+          .setValue(this.plugin.settings.templates.bed)
+          .onChange(async (v) => {
+            this.plugin.settings.templates.bed = v || "Templates/bed.md";
+            await this.plugin.saveSettings();
+          }),
+      );
 
     new Setting(containerEl)
       .setName("Pot presets")
