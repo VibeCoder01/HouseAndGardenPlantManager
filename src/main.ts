@@ -683,22 +683,34 @@ class TodayView extends ItemView {
       row.createSpan({ text: metaParts.join(" • "), cls: "pgm-meta" });
 
       const actions = row.createDiv({ cls: "pgm-actions" });
-      const waterBtn = actions.createEl("button", { text: "Log water" });
+      const waterBtn = actions.createEl("button", {
+        text: "Log water",
+        attr: { title: "Record that this plant has been watered." },
+      });
       waterBtn.addEventListener("click", () => {
         void this.plugin.logActionForPath(item.file, "water");
       });
 
-      const feedBtn = actions.createEl("button", { text: "Log feed" });
+      const feedBtn = actions.createEl("button", {
+        text: "Log feed",
+        attr: { title: "Record that this plant has been fertilised." },
+      });
       feedBtn.addEventListener("click", () => {
         void this.plugin.logActionForPath(item.file, "fertilise");
       });
 
-      const snoozeBtn = actions.createEl("button", { text: "Snooze" });
+      const snoozeBtn = actions.createEl("button", {
+        text: "Snooze",
+        attr: { title: "Postpone this task and remind me later." },
+      });
       snoozeBtn.addEventListener("click", () => {
         void this.plugin.promptSnoozeForPath(item.file);
       });
 
-      const openBtn = actions.createEl("button", { text: "Open" });
+      const openBtn = actions.createEl("button", {
+        text: "Open",
+        attr: { title: "Open this plant's note in a new pane." },
+      });
       openBtn.addEventListener("click", async () => {
         const abstract = this.plugin.app.vault.getAbstractFileByPath(item.file);
         if (abstract instanceof TFile) {
@@ -794,8 +806,14 @@ class ConfirmModal extends Modal {
     contentEl.empty();
     contentEl.createEl("p", { text: this.message });
     const actions = contentEl.createDiv({ cls: "pgm-modal-actions" });
-    const confirmBtn = actions.createEl("button", { text: this.confirmText });
-    const cancelBtn = actions.createEl("button", { text: this.cancelText });
+    const confirmBtn = actions.createEl("button", {
+      text: this.confirmText,
+      attr: { title: "Confirm and carry out this action." },
+    });
+    const cancelBtn = actions.createEl("button", {
+      text: this.cancelText,
+      attr: { title: "Cancel and close this dialog without changes." },
+    });
     confirmBtn.addEventListener("click", () => this.submit(true));
     cancelBtn.addEventListener("click", () => this.submit(false));
     confirmBtn.focus();
@@ -841,9 +859,15 @@ class PromptModal extends Modal {
     input.value = this.initial;
     input.focus();
     const actions = contentEl.createDiv({ cls: "pgm-modal-actions" });
-    const confirm = actions.createEl("button", { text: "OK" });
+    const confirm = actions.createEl("button", {
+      text: "OK",
+      attr: { title: "Save this value and close the prompt." },
+    });
     confirm.addEventListener("click", () => this.submit(input.value));
-    const cancel = actions.createEl("button", { text: "Cancel" });
+    const cancel = actions.createEl("button", {
+      text: "Cancel",
+      attr: { title: "Dismiss the prompt without saving changes." },
+    });
     cancel.addEventListener("click", () => this.submit(null));
     input.addEventListener("keydown", (evt) => {
       if (evt.key === "Enter") {
