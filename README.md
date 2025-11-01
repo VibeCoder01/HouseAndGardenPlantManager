@@ -7,6 +7,7 @@ House and Garden Plant Manager is an offline-first Obsidian plugin that helps yo
 - **Watering guidance** driven by moisture checks, growth phase, and seasonal overrides. The Today view groups plants into Overdue, Today, Soon, and Winter-suppressed buckets with quick actions.
 - **Task logging** for watering and fertilising. Each log writes a dedicated note in the configured task folder for easy auditing.
 - **Weight calibration** prompts to store wet and ready-to-water pot weights per plant for reliable lift tests.
+- **Configurable pot presets** so new plant notes can start with the right container size and medium.
 - **Location & status updates** from a single command so you can quickly move a plant or mark it dormant/gifted.
 - **Garden rotation helpers** with a crop template inserter that warns about conflicts and pre-fills sow windows from frost dates.
 - **Fully local** operation. No network calls and no personal data leaves your vault.
@@ -43,6 +44,7 @@ Navigate to *Settings → Community plugins → HaG-PM* to configure:
 - Winter months (used to suppress fertiliser prompts).
 - Folder locations for plants, garden beds, and task logs.
 - Plant template path.
+- Pot presets for the new plant command.
 - Default frost date for crop templates.
 - Weight calibration data (stored automatically per plant).
 

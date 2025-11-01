@@ -1,6 +1,27 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type HouseplantGardenPlugin from "./main";
-import type { PluginSettings } from "./types";
+import type { PluginSettings, PotPreset } from "./types";
+
+export const DEFAULT_POT_PRESETS: PotPreset[] = [
+  {
+    name: "12 cm nursery pot",
+    diameter_mm: 120,
+    volume_l: 1,
+    medium: "peat-free_multipurpose+perlite",
+  },
+  {
+    name: "15 cm nursery pot",
+    diameter_mm: 150,
+    volume_l: 2,
+    medium: "peat-free_multipurpose+perlite",
+  },
+  {
+    name: "20 cm decorative pot",
+    diameter_mm: 200,
+    volume_l: 4,
+    medium: "houseplant_mix_with_bark",
+  },
+];
 
 export const DEFAULT_SETTINGS: PluginSettings = {
   watering_method: "top-until-runoff",
@@ -13,6 +34,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   default_frost_dates: { last_spring_frost: "2025-04-10" },
   folders: { plants: "Plants", beds: "GardenBeds", tasks: "PlantTasks" },
   templates: { plant: "Templates/plant.md" },
+  pot_presets: DEFAULT_POT_PRESETS,
   calibration: {},
 };
 
@@ -84,5 +106,61 @@ export class SettingsTab extends PluginSettingTab {
       .addText((t) => t.setPlaceholder("Templates/plant.md").setValue(this.plugin.settings.templates.plant).onChange(async (v) => {
         this.plugin.settings.templates.plant = v || "Templates/plant.md"; await this.plugin.saveSettings();
       }));
+
+    new Setting(containerEl)
+      .setName("Pot presets")
+      .setDesc(
+        "Define the pot options offered when creating a new plant. One per line as: Name | diameter_mm | volume_l | medium.",
+      )
+      .addTextArea((t) => {
+        t.setValue(formatPotPresets(this.plugin.settings.pot_presets));
+        t.inputEl.rows = Math.max(3, this.plugin.settings.pot_presets.length);
+        t.onChange(async (value) => {
+          const parsed = parsePotPresets(value);
+          if (parsed.length > 0 || value.trim().length === 0) {
+            this.plugin.settings.pot_presets = parsed;
+            await this.plugin.saveSettings();
+          }
+        });
+      });
   }
+}
+
+function formatPotPresets(presets: PotPreset[]): string {
+  return presets
+    .map((preset) =>
+      [preset.name, preset.diameter_mm, preset.volume_l, preset.medium]
+        .map((part) => String(part).trim())
+        .join(" | "),
+    )
+    .join("\n");
+}
+
+function parsePotPresets(value: string): PotPreset[] {
+  const lines = value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  const presets: PotPreset[] = [];
+  for (const line of lines) {
+    const [nameRaw, diameterRaw, volumeRaw, mediumRaw] = line.split("|").map((part) => part.trim());
+    if (!nameRaw || !diameterRaw || !volumeRaw || !mediumRaw) {
+      continue;
+    }
+    const diameter = Number(diameterRaw);
+    const volume = Number(volumeRaw);
+    if (!Number.isFinite(diameter) || diameter <= 0) {
+      continue;
+    }
+    if (!Number.isFinite(volume) || volume <= 0) {
+      continue;
+    }
+    presets.push({
+      name: nameRaw,
+      diameter_mm: Math.round(diameter),
+      volume_l: Number(volume.toFixed(2)),
+      medium: mediumRaw,
+    });
+  }
+  return presets;
 }

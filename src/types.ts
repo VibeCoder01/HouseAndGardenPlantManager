@@ -1,6 +1,13 @@
 export type GrowthPhase = "auto" | "active" | "quiescent";
 export type LightLevel = "low" | "medium" | "bright-indirect" | "full-sun";
 
+export interface PotPreset {
+  name: string;
+  diameter_mm: number;
+  volume_l: number;
+  medium: string;
+}
+
 export interface Plant {
   id: string;
   type: "plant";
@@ -88,5 +95,6 @@ export interface PluginSettings {
   default_frost_dates: { last_spring_frost: string };
   folders: { plants: string; beds: string; tasks: string };
   templates: { plant: string };
+  pot_presets: PotPreset[];
   calibration: Record<string, WeightCalibration>;
 }
