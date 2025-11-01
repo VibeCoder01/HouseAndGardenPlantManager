@@ -1,0 +1,67 @@
+.pgm-today {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pgm-heading {
+  margin-bottom: 0.25rem;
+}
+
+.pgm-section {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 0.75rem;
+  background-color: var(--background-primary-alt);
+}
+
+.pgm-section h4 {
+  margin: 0 0 0.5rem 0;
+}
+
+.pgm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pgm-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.pgm-row.emphasise {
+  background-color: var(--background-modifier-hover);
+}
+
+.pgm-meta {
+  font-size: 0.85em;
+  color: var(--text-muted);
+}
+
+.pgm-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pgm-actions button {
+  font-size: 0.85em;
+}
+
+.pgm-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.pgm-modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  justify-content: flex-end;
+}
