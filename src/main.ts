@@ -10,8 +10,8 @@ import {
   TFile,
   WorkspaceLeaf,
 } from "obsidian";
-import { DEFAULT_SETTINGS, SettingsTab } from "./settings";
-import type { PluginSettings, Plant, WeightCalibration } from "./types";
+import { DEFAULT_POT_PRESETS, DEFAULT_SETTINGS, SettingsTab } from "./settings";
+import type { PluginSettings, Plant, PotPreset, WeightCalibration } from "./types";
 import { PlantIndex } from "./indexer";
 import { ensureFile, readFrontMatter, updateFileFrontMatter } from "./yamlIO";
 import { addDays, todayYMD } from "./utils/dates";
@@ -27,9 +27,9 @@ location:
 light: bright-indirect
 env: {}
 pot:
-  diameter_mm: 120
-  volume_l: 1
-  medium: peat-free_multipurpose+perlite
+  diameter_mm: {{pot_diameter_mm}}
+  volume_l: {{pot_volume_l}}
+  medium: {{medium}}
 growth_phase: auto
 seasonal_overrides:
   - months: [11,12,1,2]
@@ -47,6 +47,8 @@ status: active
 ---
 # {{common}}
 `;
+
+type PotChoice = { name?: string; diameter_mm: number; volume_l: number; medium: string };
 
 const ROTATION_FAMILIES = [
   "brassicas",
@@ -191,10 +193,28 @@ export default class HouseplantGardenPlugin extends Plugin {
     const id = `hp-${common.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
     const today = todayYMD();
 
+    const pot = await this.choosePotForNewPlant();
+    if (!pot) return;
+
+    const potVolumeStr = Number.isInteger(pot.volume_l)
+      ? pot.volume_l.toString()
+      : pot.volume_l.toFixed(2).replace(/\.0+$/, "").replace(/(\.\d*[1-9])0+$/, "$1");
+
+    const replacements = {
+      id,
+      common,
+      date: today,
+      pot_diameter_mm: String(pot.diameter_mm),
+      pot_volume_l: potVolumeStr,
+      pot_medium: pot.medium,
+      medium: pot.medium,
+      pot_name: pot.name ?? "",
+    };
+
     const template = await this.resolveTemplateContent(
       this.settings.templates.plant,
       FALLBACK_PLANT_TEMPLATE,
-      { id, common, date: today },
+      replacements,
     );
 
     const filePath = `${this.settings.folders.plants}/${common}.md`;
@@ -205,6 +225,69 @@ export default class HouseplantGardenPlugin extends Plugin {
     }
     await this.app.workspace.getLeaf(true).openFile(file);
     await this.refreshTodayView();
+  }
+
+  private async choosePotForNewPlant(): Promise<PotChoice | null> {
+    const stored = this.settings.pot_presets;
+    const presets = Array.isArray(stored) ? stored : DEFAULT_POT_PRESETS;
+    if (!presets.length) {
+      return this.promptCustomPot();
+    }
+    const options = [...presets.map((preset) => preset.name), "Custom dimensions…"];
+    const selection = await selectFromList(
+      this.app,
+      "Choose pot",
+      options,
+      presets[0]?.name,
+    );
+    if (!selection) return null;
+    if (selection === "Custom dimensions…") {
+      return this.promptCustomPot(presets[0]);
+    }
+    const preset = presets.find((p) => p.name === selection) ?? presets[0];
+    return { ...preset };
+  }
+
+  private async promptCustomPot(defaults?: PotPreset): Promise<PotChoice | null> {
+    const diameterStr = await this.prompt(
+      "Pot diameter (mm)?",
+      defaults ? String(defaults.diameter_mm) : "120",
+    );
+    if (!diameterStr) return null;
+    const diameter = Number(diameterStr);
+    if (!Number.isFinite(diameter) || diameter <= 0) {
+      new Notice("Enter a valid pot diameter in millimetres.");
+      return null;
+    }
+
+    const volumeStr = await this.prompt(
+      "Pot volume (litres)?",
+      defaults ? String(defaults.volume_l) : "1",
+    );
+    if (!volumeStr) return null;
+    const volume = Number(volumeStr);
+    if (!Number.isFinite(volume) || volume <= 0) {
+      new Notice("Enter a valid pot volume in litres.");
+      return null;
+    }
+
+    const medium = await this.prompt(
+      "Potting medium mix?",
+      defaults?.medium ?? "peat-free_multipurpose+perlite",
+    );
+    if (medium === null) return null;
+    const trimmedMedium = medium.trim();
+    if (!trimmedMedium) {
+      new Notice("Enter a potting medium description.");
+      return null;
+    }
+
+    return {
+      name: defaults?.name ?? "Custom pot",
+      diameter_mm: Math.round(diameter),
+      volume_l: Number(volume.toFixed(2)),
+      medium: trimmedMedium,
+    };
   }
 
   /** Guarded log action for plant in active editor. */
