@@ -26,6 +26,14 @@ export class SettingsTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.createEl("h2", { text: "Houseplant & Garden Manager" });
+    containerEl.createEl("p", {
+      text:
+        "Configure how the plugin schedules care tasks and where it stores generated files. Hover over each option to read a quick reminder.",
+    });
+    containerEl.createEl("p", {
+      text:
+        "All paths are relative to your vault root. Changes are saved instantly, so there is no extra save button to click.",
+    });
 
     new Setting(containerEl)
       .setName("Bottom-watering mode")
@@ -37,6 +45,7 @@ export class SettingsTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Flush salts every N months")
+      .setDesc("Choose how often the plugin reminds you to perform a thorough flush.")
       .addText((t) => t.setPlaceholder("4").setValue(String(this.plugin.settings.flush_salts_every_months)).onChange(async (v) => {
         const n = Number(v) || 4;
         this.plugin.settings.flush_salts_every_months = Math.max(1, n);
@@ -54,7 +63,9 @@ export class SettingsTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Folders")
-      .setDesc("Plants / Beds / Tasks base folders")
+      .setDesc(
+        "Plants / Beds / Tasks base folders. The plugin will create new notes underneath these locations.",
+      )
       .addText((t) => t.setPlaceholder("Plants").setValue(this.plugin.settings.folders.plants).onChange(async (v) => {
         this.plugin.settings.folders.plants = v || "Plants"; await this.plugin.saveSettings();
       }));
@@ -69,6 +80,7 @@ export class SettingsTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Plant template path")
+      .setDesc("Used when generating a new plant note. Provide a Markdown template file.")
       .addText((t) => t.setPlaceholder("Templates/plant.md").setValue(this.plugin.settings.templates.plant).onChange(async (v) => {
         this.plugin.settings.templates.plant = v || "Templates/plant.md"; await this.plugin.saveSettings();
       }));
