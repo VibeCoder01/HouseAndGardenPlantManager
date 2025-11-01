@@ -71,6 +71,12 @@ export interface PlantTask {
   note?: string;
 }
 
+export interface WeightCalibration {
+  wet: number;
+  ready: number;
+  updated: string; // ISO datetime
+}
+
 export interface PluginSettings {
   watering_method: "top-until-runoff" | "bottom-soak";
   bottom_watering_mode: boolean;
@@ -82,4 +88,5 @@ export interface PluginSettings {
   default_frost_dates: { last_spring_frost: string };
   folders: { plants: string; beds: string; tasks: string };
   templates: { plant: string };
+  calibration: Record<string, WeightCalibration>;
 }

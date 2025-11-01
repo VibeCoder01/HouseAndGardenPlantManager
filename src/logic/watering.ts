@@ -1,31 +1,106 @@
 import type { Plant } from "../types";
-import { todayYMD } from "../utils/dates";
+import { addDays, todayYMD } from "../utils/dates";
+
+export type WateringStatus = "overdue" | "due-today" | "soon" | "suppressed" | "not-due";
+
+export interface WateringComputation {
+  due: boolean;
+  status: WateringStatus;
+  reason: string;
+  daysSince?: number;
+  threshold?: number;
+  nextDue?: string;
+}
 
 /** Determine if watering is due, using hints + checks + phase. */
-export function computeWaterDue(p: Plant, winterMonths: number[]): { due: boolean; reason: string } {
-  // Simplified: due if no last, or hint interval elapsed and not winter-suppressed.
+export function computeWaterDue(p: Plant, winterMonths: number[]): WateringComputation {
   const today = todayYMD();
   const last = p.care?.water?.last;
   const hint = p.care?.water?.interval_days_hint ?? 7;
+  const month = new Date().getMonth() + 1;
+  const factor = seasonalWaterFactor(p, month);
+  const threshold = Math.max(1, Math.round(hint / factor));
 
-  if (!last) return { due: true, reason: "No watering logged yet" };
+  if (!last) {
+    return {
+      due: true,
+      status: "overdue",
+      reason: "No watering logged yet",
+      threshold,
+      nextDue: today,
+    };
+  }
 
   const d1 = new Date(last);
   const d2 = new Date(today);
   const diffDays = Math.floor((d2.getTime() - d1.getTime()) / 86400000);
+  const nextDue = addDays(last, threshold);
 
-  // Seasonal suppression for quiescent/winter
-  const month = new Date().getMonth() + 1;
-  const quiescent = p.growth_phase === "quiescent" || winterMonths.includes(month);
-
-  const factor = seasonalWaterFactor(p, month);
-  const threshold = Math.max(1, Math.round(hint / factor));
-
-  if (quiescent && diffDays < threshold + 2) {
-    return { due: false, reason: "Winter suppression" };
+  if (diffDays < 0) {
+    return {
+      due: false,
+      status: "not-due",
+      reason: "Last watering logged in the future",
+      daysSince: diffDays,
+      threshold,
+      nextDue,
+    };
   }
 
-  return diffDays >= threshold ? { due: true, reason: `>${threshold} days since last` } : { due: false, reason: `Only ${diffDays} days elapsed` };
+  const winterSuppressed = p.growth_phase === "quiescent" || winterMonths.includes(month);
+  if (winterSuppressed && diffDays < threshold + 2) {
+    return {
+      due: false,
+      status: "suppressed",
+      reason: "Winter suppression",
+      daysSince: diffDays,
+      threshold,
+      nextDue,
+    };
+  }
+
+  if (diffDays > threshold) {
+    return {
+      due: true,
+      status: "overdue",
+      reason: `${diffDays} days since last watering (target ${threshold})`,
+      daysSince: diffDays,
+      threshold,
+      nextDue,
+    };
+  }
+
+  if (diffDays === threshold) {
+    return {
+      due: true,
+      status: "due-today",
+      reason: "Hit interval hint",
+      daysSince: diffDays,
+      threshold,
+      nextDue,
+    };
+  }
+
+  const daysRemaining = threshold - diffDays;
+  if (daysRemaining <= 3) {
+    return {
+      due: false,
+      status: "soon",
+      reason: `Due in ${daysRemaining} day(s)`,
+      daysSince: diffDays,
+      threshold,
+      nextDue,
+    };
+  }
+
+  return {
+    due: false,
+    status: "not-due",
+    reason: `${daysRemaining} day(s) until hint interval`,
+    daysSince: diffDays,
+    threshold,
+    nextDue,
+  };
 }
 
 function seasonalWaterFactor(p: Plant, month: number): number {

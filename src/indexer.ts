@@ -13,10 +13,7 @@ export class PlantIndex {
     const idx: Index = { plants: {}, beds: {} };
     const add = async (base: string, kind: "plant" | "bed") => {
       const folder = normalizePath(base);
-      // Traverse vault
       const files: TFile[] = [];
-      // @ts-ignore: adapter has list
-      const list = await this.vault.adapter.list(folder).catch(() => ({ files: [], folders: [] }));
       const walk = async (dir: string) => {
         // @ts-ignore
         const listing = await this.vault.adapter.list(dir).catch(() => ({ files: [], folders: [] }));

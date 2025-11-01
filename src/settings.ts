@@ -13,6 +13,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   default_frost_dates: { last_spring_frost: "2025-04-10" },
   folders: { plants: "Plants", beds: "GardenBeds", tasks: "PlantTasks" },
   templates: { plant: "Templates/plant.md" },
+  calibration: {},
 };
 
 export class SettingsTab extends PluginSettingTab {

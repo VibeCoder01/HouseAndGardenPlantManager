@@ -6,6 +6,10 @@ location: Garden NE
 size_m2: 1.2
 soil: loam
 rotation_group: legumes
+rotation_history:
+  - legumes
+  - brassicas
+rotation_gap_years: 3
 frost_context:
   last_spring_frost: 2025-04-10
 crops:
