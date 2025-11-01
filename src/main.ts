@@ -165,6 +165,15 @@ export default class HouseplantGardenPlugin extends Plugin {
     return await modal.openAndGetValue();
   }
 
+  private async confirm(
+    message: string,
+    confirmText = "Override",
+    cancelText = "Cancel",
+  ): Promise<boolean> {
+    const modal = new ConfirmModal(this.app, message, confirmText, cancelText);
+    return await modal.openAndGetValue();
+  }
+
   private async resolveTemplateContent(
     path: string,
     fallback: string,
@@ -338,8 +347,14 @@ export default class HouseplantGardenPlugin extends Plugin {
         this.settings.fertiliser_policy === "active-only" &&
         (winter || fm.growth_phase === "quiescent")
       ) {
-        new Notice("Suppressed in winter/quiescent period. Override manually if needed.");
-        return false;
+        const override = await this.confirm(
+          "Feeding suppressed for winter/quiescent period. Log feed anyway?",
+          "Log feed",
+        );
+        if (!override) {
+          new Notice("Feed cancelled.");
+          return false;
+        }
       }
     }
 
@@ -754,6 +769,61 @@ async function selectFromList(
   const modal = new StringSuggestModal(app, promptText, options, initial);
   const result = await modal.openAndGetValue();
   return result;
+}
+
+class ConfirmModal extends Modal {
+  private resolveFn: ((value: boolean) => void) | null = null;
+  private choice: boolean | null = null;
+  private handleKeydown = (evt: KeyboardEvent) => {
+    if (evt.key === "Enter") {
+      evt.preventDefault();
+      this.submit(true);
+    }
+    if (evt.key === "Escape") {
+      evt.preventDefault();
+      this.submit(false);
+    }
+  };
+
+  constructor(app: App, private message: string, private confirmText: string, private cancelText: string) {
+    super(app);
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.createEl("p", { text: this.message });
+    const actions = contentEl.createDiv({ cls: "pgm-modal-actions" });
+    const confirmBtn = actions.createEl("button", { text: this.confirmText });
+    const cancelBtn = actions.createEl("button", { text: this.cancelText });
+    confirmBtn.addEventListener("click", () => this.submit(true));
+    cancelBtn.addEventListener("click", () => this.submit(false));
+    confirmBtn.focus();
+    this.modalEl.addEventListener("keydown", this.handleKeydown);
+  }
+
+  private submit(choice: boolean) {
+    this.choice = choice;
+    this.close();
+  }
+
+  onClose() {
+    const { contentEl } = this;
+    contentEl.empty();
+    this.modalEl.removeEventListener("keydown", this.handleKeydown);
+    const resolve = this.resolveFn;
+    this.resolveFn = null;
+    const choice = this.choice;
+    this.choice = null;
+    resolve?.(choice ?? false);
+  }
+
+  openAndGetValue(): Promise<boolean> {
+    return new Promise((resolve) => {
+      this.resolveFn = resolve;
+      this.open();
+    });
+  }
 }
 
 class PromptModal extends Modal {
