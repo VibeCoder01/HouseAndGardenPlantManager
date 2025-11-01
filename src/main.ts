@@ -224,7 +224,12 @@ export default class HouseplantGardenPlugin extends Plugin {
   async createPlant() {
     const common = await this.prompt("Common name?");
     if (!common) return;
-    const id = `hp-${common.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+    const slug = common
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+/, "")
+      .replace(/-+$/, "");
+    const id = `hp-${slug}`;
     const today = todayYMD();
 
     const pot = await this.choosePotForNewPlant();
@@ -251,7 +256,7 @@ export default class HouseplantGardenPlugin extends Plugin {
       replacements,
     );
 
-    const filePath = `${this.settings.folders.plants}/${common}.md`;
+    const filePath = `${this.settings.folders.plants}/${slug || id}.md`;
     const alreadyExists = await this.app.vault.adapter.exists(filePath).catch(() => false);
     const file = await ensureFile(this.app.vault, filePath, template);
     if (alreadyExists) {
@@ -504,12 +509,14 @@ export default class HouseplantGardenPlugin extends Plugin {
       return obj;
     });
 
-    const taskName = `${todayYMD()}_${fm.id}_${action}.md`;
+    const performed = new Date().toISOString();
+    const safePerformed = performed.replace(/[:.]/g, "-");
+    const taskName = `${todayYMD()}_${fm.id}_${action}_${safePerformed}.md`;
     const taskContent = `---
 type: plant-task
 plant_id: ${fm.id}
 action: ${action}
-performed: ${new Date().toISOString()}
+performed: ${performed}
 ---
 `;
     await ensureFile(
@@ -622,8 +629,8 @@ performed: ${new Date().toISOString()}
       const last = obj.care.water.last;
       const hint = obj.care.water.interval_days_hint ?? 7;
       const today = todayYMD();
-      const next = last || today;
-      obj.care.water.last = addDays(next, n - hint);
+      const baseDue = last ? addDays(last, hint) : today;
+      obj.care.water.last = addDays(baseDue, n - hint);
       return obj;
     });
     new Notice("Snoozed.");
