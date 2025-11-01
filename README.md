@@ -36,17 +36,60 @@ Open from the leaf ribbon icon or the command palette. The view contains:
 
 Each entry shows the last logged watering date, the next hint, and buttons for logging water, logging feed, snoozing, or opening the note.
 
+## Quick start
+
+1. **Install and enable the plugin**
+   - Open *Settings → Community plugins*, browse for **House and Garden Plant Manager**, and click *Install* then *Enable*.
+   - If installing from source, copy the build output into `.obsidian/plugins/houseplant-garden-manager/` and enable the plugin from the same screen.
+2. **Run the setup command**
+   - Use the command palette to trigger **HaG-PM: Initialise vault folders**. This creates the plant, bed, and task folders when they do not yet exist.
+3. **Adjust your defaults**
+   - Follow the checklist in the [Settings](#settings) section to match your watering style, winter months, and note locations.
+4. **Create your first plant**
+   - Run **Plant: New plant** from the command palette, supply the plant name, and confirm the suggested file path.
+   - Review the generated front matter and tweak the pot size, watering interval hint, or tags before saving.
+5. **Log care tasks**
+   - From the Today view or the plant note, run **Plant: Log water** or **Plant: Log feed** to append a task note and update the next due hint.
+   - If you prefer weight-based watering, run **Plant: Calibrate pot weight** once per plant to store wet and ready-to-water baselines.
+
+Keep the Today view pinned for a dashboard of overdue, due-today, and upcoming tasks. Snooze hints from the view when a plant feels wetter than expected.
+
 ## Settings
 
-Navigate to *Settings → Community plugins → HaG-PM* to configure:
+Open *Settings → Community plugins → HaG-PM* to review every control. The settings pane is organised into the following sections:
 
-- Watering method and fertiliser policy defaults.
-- Winter months (used to suppress fertiliser prompts).
-- Folder locations for plants, garden beds, and task logs.
-- Plant template path.
-- Pot presets for the new plant command.
-- Default frost date for crop templates.
-- Weight calibration data (stored automatically per plant).
+### Care defaults
+
+| Setting | Description |
+| ------- | ----------- |
+| **Watering method** | Choose between `top-until-runoff` and `bottom-soak`. The selection updates the hint text shown in plant notes and the Today view. |
+| **Flush salts every X months** | Sets a reminder interval for top-watering flushes when bottom watering is enabled. Enter `0` to disable the reminder. |
+| **Fertiliser policy** | Controls when fertiliser prompts appear: `active-only`, `always`, or `paused`. Winter months still suppress prompts unless you set `always`. |
+| **Winter months** | Configure which months count as winter in your region. The plugin pauses fertiliser suggestions during these months and highlights plants as winter-suppressed. |
+
+### Vault structure
+
+| Setting | Description |
+| ------- | ----------- |
+| **Plant folder** | Where new plant notes are created. The default is `Plants/`. Update the path if you keep plants in a different folder. |
+| **Garden bed folder** | Destination for garden bed notes. Used by the crop template command. |
+| **Task log folder** | Where watering and fertilising logs are stored. Each log creates an individual markdown note in this folder. |
+| **Plant template path** | Path to the markdown template used by **Plant: New plant**. The template should include the YAML front matter defined in [`Templates/plant.md`](Templates/plant.md). |
+
+### Seasonal references
+
+| Setting | Description |
+| ------- | ----------- |
+| **Default frost dates** | Provide the last spring frost date so the crop template command can pre-fill sow and harvest windows. Adjust for your local climate. |
+| **Rotation gap** | The minimum number of seasons before planting the same crop family in a bed. Conflicts show up when inserting templates or viewing a bed note. |
+
+### Per-plant calibration
+
+| Setting | Description |
+| ------- | ----------- |
+| **Weight calibration data** | Displays stored wet and ready-to-water weight values per plant. These records are maintained automatically after you run **Plant: Calibrate pot weight**. Use the trash icon next to a plant entry to reset its calibration. |
+
+After updating settings, visit the Today view to verify the hints match your expectations. You can tweak individual plants by editing their front matter without changing the global defaults.
 
 ## Installation
 
