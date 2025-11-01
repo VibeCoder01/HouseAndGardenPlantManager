@@ -12,6 +12,12 @@ import {
 } from "obsidian";
 import { DEFAULT_POT_PRESETS, DEFAULT_SETTINGS, SettingsTab } from "./settings";
 import type { PluginSettings, Plant, PotPreset, WeightCalibration } from "./types";
+import {
+  HOUSEPLANT_CATALOG,
+  GARDEN_PLANT_CATALOG,
+  type HouseplantCatalogEntry,
+  type GardenPlantCatalogEntry,
+} from "./catalog";
 import { PlantIndex } from "./indexer";
 import { ensureFile, readFrontMatter, updateFileFrontMatter } from "./yamlIO";
 import { addDays, todayYMD } from "./utils/dates";
@@ -22,10 +28,13 @@ const FALLBACK_PLANT_TEMPLATE = `---
 id: {{id}}
 type: plant
 common: {{common}}
+latin: {{latin}}
 acquired: {{date}}
 location:
-light: bright-indirect
-env: {}
+light: {{light}}
+pet_safe: {{pet_safe}}
+env:
+  humidity_pref: {{humidity}}
 pot:
   diameter_mm: {{pot_diameter_mm}}
   volume_l: {{pot_volume_l}}
@@ -39,13 +48,15 @@ care:
   water:
     check: combo
     target_rule: pot_10pct_or_runoff
-    interval_days_hint: 7
+    interval_days_hint: {{water_interval_days_hint}}
   fertilise:
-    during: active_only
+    during: {{fertilise_during}}
     cadence: monthly
+    interval_weeks_hint: {{fertilise_interval_weeks}}
 status: active
 ---
-# {{common}}
+# {{common}} ({{latin}})
+> {{summary}}
 `;
 
 const FALLBACK_BED_TEMPLATE = `---
@@ -76,6 +87,10 @@ const ROTATION_FAMILIES = [
   "cucurbits",
   "misc",
 ];
+
+function quoteYaml(value: string): string {
+  return JSON.stringify(value);
+}
 
 export default class HouseplantGardenPlugin extends Plugin {
   settings!: PluginSettings;
@@ -222,7 +237,11 @@ export default class HouseplantGardenPlugin extends Plugin {
 
   /** Create a new plant note from template. */
   async createPlant() {
-    const common = await this.prompt("Common name?");
+    const selection = await new HouseplantCatalogModal(this.app).openAndGetChoice();
+    if (!selection) return;
+    const selectedEntry = selection.kind === "entry" ? selection.entry : null;
+    const chosenName = selection.kind === "entry" ? selection.entry.common : selection.name.trim();
+    const common = chosenName || (await this.prompt("Common name?"))?.trim();
     if (!common) return;
     const slug = common
       .toLowerCase()
@@ -235,6 +254,18 @@ export default class HouseplantGardenPlugin extends Plugin {
     const pot = await this.choosePotForNewPlant();
     if (!pot) return;
 
+    const latin = selectedEntry?.latin ?? "";
+    const light = selectedEntry?.light ?? "bright-indirect";
+    const humidity = selectedEntry?.humidity ?? "medium";
+    const waterInterval = selectedEntry?.water_interval_days_hint ?? 7;
+    const fertiliseInterval = selectedEntry?.feeding_interval_weeks ?? 4;
+    const summary = selectedEntry?.summary ?? `Care notes for ${common}.`;
+    const petSafe = selectedEntry?.pet_safe === true
+      ? "true"
+      : selectedEntry?.pet_safe === false
+      ? "false"
+      : "unknown";
+
     const potVolumeStr = Number.isInteger(pot.volume_l)
       ? pot.volume_l.toString()
       : pot.volume_l.toFixed(2).replace(/\.0+$/, "").replace(/(\.\d*[1-9])0+$/, "$1");
@@ -242,12 +273,20 @@ export default class HouseplantGardenPlugin extends Plugin {
     const replacements = {
       id,
       common,
+      latin,
       date: today,
       pot_diameter_mm: String(pot.diameter_mm),
       pot_volume_l: potVolumeStr,
       pot_medium: pot.medium,
       medium: pot.medium,
       pot_name: pot.name ?? "",
+      light,
+      humidity,
+      pet_safe: petSafe,
+      water_interval_days_hint: String(waterInterval),
+      fertilise_during: "active_only",
+      fertilise_interval_weeks: String(fertiliseInterval),
+      summary,
     };
 
     const template = await this.resolveTemplateContent(
@@ -664,14 +703,23 @@ performed: ${performed}
       return;
     }
 
-    const crop = await this.prompt("Crop name?", "");
-    if (!crop) return;
+    const cropSelection = await new GardenCatalogModal(this.app).openAndGetChoice();
+    if (!cropSelection) return;
+    const cropEntry = cropSelection.kind === "entry" ? cropSelection.entry : null;
+    let cropName = cropEntry?.common ?? (cropSelection.kind === "custom" ? cropSelection.name.trim() : "");
+    if (!cropName) {
+      const typed = (await this.prompt("Crop name?", ""))?.trim();
+      if (!typed) return;
+      cropName = typed;
+    }
+    const crop = cropName;
 
+    const defaultFamily = cropEntry?.family ?? fm.rotation_group ?? "misc";
     const family = await selectFromList(
       this.app,
       "Rotation family",
       ROTATION_FAMILIES,
-      fm.rotation_group ?? "misc",
+      defaultFamily,
     );
     if (!family) return;
 
@@ -689,17 +737,44 @@ performed: ${performed}
       this.settings.default_frost_dates.last_spring_frost;
     const early = addDays(frost, -14).slice(5);
     const late = addDays(frost, 60).slice(5);
+    const sowOutdoors = cropEntry?.sow_outdoors ?? [early, late];
+    const sowIndoors = cropEntry?.sow_indoors;
+    const harvestWindow = cropEntry?.harvest_window;
 
-      const snippetLines = [
-        `- crop: ${crop}`,
-        "  variety:",
-        `  family: ${family}`,
-        "  sow_window:",
-        `    outdoors: [${early}, ${late}]`,
-        "  harvest_window:",
-        "  sowed:",
-        "  notes: []",
-      ];
+      const snippetLines = [`- crop: ${crop}`];
+      if (cropEntry?.latin) {
+        snippetLines.push(`  latin: ${cropEntry.latin}`);
+      }
+      snippetLines.push("  variety:");
+      snippetLines.push(`  family: ${family}`);
+      if (cropEntry?.sun) {
+        snippetLines.push(`  sun: ${cropEntry.sun}`);
+      }
+      if (typeof cropEntry?.spacing_cm === "number") {
+        snippetLines.push(`  spacing_cm: ${cropEntry.spacing_cm}`);
+      }
+      if (typeof cropEntry?.frost_sensitive === "boolean") {
+        snippetLines.push(`  frost_sensitive: ${cropEntry.frost_sensitive ? "true" : "false"}`);
+      }
+      snippetLines.push("  sow_window:");
+      if (sowIndoors) {
+        snippetLines.push(`    indoors: [${sowIndoors[0]}, ${sowIndoors[1]}]`);
+      }
+      if (sowOutdoors) {
+        snippetLines.push(`    outdoors: [${sowOutdoors[0]}, ${sowOutdoors[1]}]`);
+      }
+      if (harvestWindow) {
+        snippetLines.push(`  harvest_window: [${harvestWindow[0]}, ${harvestWindow[1]}]`);
+      } else {
+        snippetLines.push("  harvest_window:");
+      }
+      snippetLines.push("  sowed:");
+      if (cropEntry?.summary) {
+        snippetLines.push("  notes:");
+        snippetLines.push(`    - ${quoteYaml(cropEntry.summary)}`);
+      } else {
+        snippetLines.push("  notes: []");
+      }
     if (hasConflict) {
       snippetLines.push("  rotation_warning: true");
     }
@@ -1045,6 +1120,207 @@ class PromptModal extends Modal {
   openAndGetValue(): Promise<string | null> {
     return new Promise((resolve) => {
       this.resolveFn = resolve;
+      this.open();
+    });
+  }
+}
+
+type HouseplantCatalogChoice =
+  | { kind: "entry"; entry: HouseplantCatalogEntry }
+  | { kind: "custom"; name: string };
+
+class HouseplantCatalogModal extends SuggestModal<HouseplantCatalogChoice> {
+  private resolveFn: ((value: HouseplantCatalogChoice | null) => void) | null = null;
+  private settled = false;
+  private readonly entries = [...HOUSEPLANT_CATALOG].sort((a, b) =>
+    a.common.localeCompare(b.common),
+  );
+
+  constructor(app: App) {
+    super(app);
+  }
+
+  onOpen() {
+    super.onOpen();
+    this.setPlaceholder("Search houseplant catalog or type a custom name");
+    this.inputEl.focus();
+  }
+
+  getSuggestions(query: string): HouseplantCatalogChoice[] {
+    const trimmed = query.trim();
+    const normalised = trimmed.toLowerCase();
+    const matches = (normalised
+      ? this.entries.filter(
+          (entry) =>
+            entry.common.toLowerCase().includes(normalised) ||
+            entry.latin.toLowerCase().includes(normalised),
+        )
+      : this.entries
+    ).slice(0, 30);
+    const suggestions: HouseplantCatalogChoice[] = matches.map((entry) => ({
+      kind: "entry",
+      entry,
+    }));
+    if (trimmed.length) {
+      const exact = this.entries.some((entry) => entry.common.toLowerCase() === normalised);
+      if (!exact) {
+        suggestions.push({ kind: "custom", name: trimmed });
+      }
+    } else if (!suggestions.some((s) => s.kind === "custom")) {
+      suggestions.push({ kind: "custom", name: "" });
+    }
+    return suggestions;
+  }
+
+  renderSuggestion(value: HouseplantCatalogChoice, el: HTMLElement) {
+    el.empty();
+    if (value.kind === "entry") {
+      el.createEl("div", { text: value.entry.common, cls: "pgm-suggest-title" });
+      el.createEl("div", {
+        text: value.entry.latin,
+        cls: "pgm-suggest-sub",
+      });
+      el.createEl("div", {
+        text: `Light: ${value.entry.light} • Water ~${value.entry.water_interval_days_hint}d`,
+        cls: "pgm-suggest-meta",
+      });
+    } else {
+      const label = value.name
+        ? `Use custom name: ${value.name}`
+        : "Create custom plant name…";
+      el.createEl("div", { text: label });
+    }
+  }
+
+  onChooseSuggestion(value: HouseplantCatalogChoice) {
+    this.settled = true;
+    this.resolveFn?.(value);
+    this.resolveFn = null;
+    this.close();
+  }
+
+  onClose() {
+    super.onClose();
+    if (!this.settled) {
+      const typed = this.inputEl.value.trim();
+      if (typed) {
+        this.resolveFn?.({ kind: "custom", name: typed });
+      } else {
+        this.resolveFn?.(null);
+      }
+    }
+    this.resolveFn = null;
+    this.settled = false;
+  }
+
+  openAndGetChoice(): Promise<HouseplantCatalogChoice | null> {
+    return new Promise((resolve) => {
+      this.resolveFn = resolve;
+      this.settled = false;
+      this.open();
+    });
+  }
+}
+
+type GardenCatalogChoice =
+  | { kind: "entry"; entry: GardenPlantCatalogEntry }
+  | { kind: "custom"; name: string };
+
+class GardenCatalogModal extends SuggestModal<GardenCatalogChoice> {
+  private resolveFn: ((value: GardenCatalogChoice | null) => void) | null = null;
+  private settled = false;
+  private readonly entries = [...GARDEN_PLANT_CATALOG].sort((a, b) =>
+    a.common.localeCompare(b.common),
+  );
+
+  constructor(app: App) {
+    super(app);
+  }
+
+  onOpen() {
+    super.onOpen();
+    this.setPlaceholder("Search garden catalog or type a custom crop");
+    this.inputEl.focus();
+  }
+
+  getSuggestions(query: string): GardenCatalogChoice[] {
+    const trimmed = query.trim();
+    const normalised = trimmed.toLowerCase();
+    const matches = (normalised
+      ? this.entries.filter(
+          (entry) =>
+            entry.common.toLowerCase().includes(normalised) ||
+            entry.latin.toLowerCase().includes(normalised),
+        )
+      : this.entries
+    ).slice(0, 30);
+    const suggestions: GardenCatalogChoice[] = matches.map((entry) => ({
+      kind: "entry",
+      entry,
+    }));
+    if (trimmed.length) {
+      const exact = this.entries.some((entry) => entry.common.toLowerCase() === normalised);
+      if (!exact) {
+        suggestions.push({ kind: "custom", name: trimmed });
+      }
+    } else if (!suggestions.some((s) => s.kind === "custom")) {
+      suggestions.push({ kind: "custom", name: "" });
+    }
+    return suggestions;
+  }
+
+  renderSuggestion(value: GardenCatalogChoice, el: HTMLElement) {
+    el.empty();
+    if (value.kind === "entry") {
+      el.createEl("div", { text: value.entry.common, cls: "pgm-suggest-title" });
+      const subParts = [value.entry.latin];
+      if (value.entry.family) {
+        subParts.push(`Family: ${value.entry.family}`);
+      }
+      el.createEl("div", { text: subParts.join(" • "), cls: "pgm-suggest-sub" });
+      const details: string[] = [];
+      if (value.entry.sun) {
+        details.push(`Sun: ${value.entry.sun}`);
+      }
+      if (value.entry.sow_outdoors) {
+        details.push(`Outdoors: ${value.entry.sow_outdoors[0]}-${value.entry.sow_outdoors[1]}`);
+      }
+      if (details.length) {
+        el.createEl("div", { text: details.join(" • "), cls: "pgm-suggest-meta" });
+      }
+    } else {
+      const label = value.name
+        ? `Use custom crop: ${value.name}`
+        : "Create custom crop entry…";
+      el.createEl("div", { text: label });
+    }
+  }
+
+  onChooseSuggestion(value: GardenCatalogChoice) {
+    this.settled = true;
+    this.resolveFn?.(value);
+    this.resolveFn = null;
+    this.close();
+  }
+
+  onClose() {
+    super.onClose();
+    if (!this.settled) {
+      const typed = this.inputEl.value.trim();
+      if (typed) {
+        this.resolveFn?.({ kind: "custom", name: typed });
+      } else {
+        this.resolveFn?.(null);
+      }
+    }
+    this.resolveFn = null;
+    this.settled = false;
+  }
+
+  openAndGetChoice(): Promise<GardenCatalogChoice | null> {
+    return new Promise((resolve) => {
+      this.resolveFn = resolve;
+      this.settled = false;
       this.open();
     });
   }

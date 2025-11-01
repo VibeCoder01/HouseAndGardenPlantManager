@@ -46,7 +46,12 @@ export interface Plant {
 export interface BedCrop {
   crop: string;
   variety?: string;
-  sow_window?: { outdoors?: [string, string] };
+  latin?: string;
+  family?: string;
+  sun?: string;
+  spacing_cm?: number;
+  frost_sensitive?: boolean;
+  sow_window?: { indoors?: [string, string]; outdoors?: [string, string] };
   harvest_window?: [string, string];
   sowed?: string;
   notes?: string[];
