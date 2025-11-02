@@ -7,8 +7,10 @@ import {
   Notice,
   Plugin,
   SuggestModal,
+  TAbstractFile,
   TFile,
   WorkspaceLeaf,
+  normalizePath,
 } from "obsidian";
 import { DEFAULT_POT_PRESETS, DEFAULT_SETTINGS, SettingsTab } from "./settings";
 import type { PluginSettings, Plant, PotPreset, WeightCalibration } from "./types";
@@ -197,6 +199,27 @@ export default class HouseplantGardenPlugin extends Plugin {
 
     this.index = new PlantIndex(this.app.vault, this.settings.folders);
 
+    const refreshIfPlantNote = (file: TAbstractFile) => {
+      if (!(file instanceof TFile)) return;
+      if (file.extension !== "md") return;
+      if (!this.isPlantNotePath(file.path)) return;
+      void this.refreshTodayView();
+    };
+
+    this.registerEvent(this.app.vault.on("create", refreshIfPlantNote));
+    this.registerEvent(this.app.vault.on("modify", refreshIfPlantNote));
+    this.registerEvent(this.app.vault.on("delete", refreshIfPlantNote));
+    this.registerEvent(
+      this.app.vault.on("rename", (file, oldPath) => {
+        if (
+          (file instanceof TFile && this.isPlantNotePath(file.path)) ||
+          this.isPlantNotePath(oldPath)
+        ) {
+          void this.refreshTodayView();
+        }
+      }),
+    );
+
     this.addCommand({
       id: "pgm-new-plant",
       name: "Plant: New plant",
@@ -304,6 +327,15 @@ export default class HouseplantGardenPlugin extends Plugin {
   private async refreshTodayView() {
     this.todayView?.requestRender();
     this.dashboardView?.requestRender();
+  }
+
+  private isPlantNotePath(path: string): boolean {
+    const normalizedPlantFolder = normalizePath(this.settings.folders.plants);
+    const folderPrefix = normalizedPlantFolder.endsWith("/")
+      ? normalizedPlantFolder
+      : `${normalizedPlantFolder}/`;
+    const normalizedPath = normalizePath(path);
+    return normalizedPath === normalizedPlantFolder || normalizedPath.startsWith(folderPrefix);
   }
 
   private async prompt(message: string, defaultValue = ""): Promise<string | null> {
