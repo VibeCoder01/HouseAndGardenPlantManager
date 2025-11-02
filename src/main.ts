@@ -243,16 +243,37 @@ export default class HouseplantGardenPlugin extends Plugin {
     const chosenName = selection.kind === "entry" ? selection.entry.common : selection.name.trim();
     const common = chosenName || (await this.prompt("Common name?"))?.trim();
     if (!common) return;
-    const slug = common
+    const today = todayYMD();
+
+    const asciiName = common
+      .normalize("NFKD")
+      .replace(/\p{Diacritic}/gu, "");
+    let slug = asciiName
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+/, "")
       .replace(/-+$/, "");
+    if (!slug) {
+      const codepointSlug = Array.from(common)
+        .map((char) => {
+          const code = char.codePointAt(0);
+          return code ? code.toString(16) : "";
+        })
+        .filter(Boolean)
+        .join("-");
+      slug = codepointSlug || today.replace(/-/g, "");
+    }
     const id = `hp-${slug}`;
-    const today = todayYMD();
 
     const pot = await this.choosePotForNewPlant();
     if (!pot) return;
+
+    const location = await this.promptNonEmpty(
+      "Where is this plant located?",
+      "",
+      "Enter a location for the plant.",
+    );
+    if (location === null) return;
 
     const latin = selectedEntry?.latin ?? "";
     const light = selectedEntry?.light ?? "bright-indirect";
@@ -275,6 +296,7 @@ export default class HouseplantGardenPlugin extends Plugin {
       common,
       latin,
       date: today,
+      location,
       pot_diameter_mm: String(pot.diameter_mm),
       pot_volume_l: potVolumeStr,
       pot_medium: pot.medium,
@@ -848,8 +870,6 @@ class TodayView extends ItemView {
       }
 
       const idx = await this.plugin.index.build();
-      const winterMonths = this.plugin.settings.winter_months_uk;
-
       const groups: Record<string, Array<{ file: string; plant: Plant; water: WateringComputation }>> = {
         overdue: [],
         today: [],
@@ -859,7 +879,7 @@ class TodayView extends ItemView {
 
       for (const id in idx.plants) {
         const item = idx.plants[id];
-        const res = computeWaterDue(item.data, winterMonths);
+        const res = computeWaterDue(item.data);
         switch (res.status) {
           case "overdue":
             groups.overdue.push({ file: item.file, plant: item.data, water: res });
