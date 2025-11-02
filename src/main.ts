@@ -92,6 +92,90 @@ function quoteYaml(value: string): string {
   return JSON.stringify(value);
 }
 
+type StoredSettings = Partial<PluginSettings> | null;
+
+function cloneSettings(settings: PluginSettings): PluginSettings {
+  return {
+    ...settings,
+    winter_months_uk: [...settings.winter_months_uk],
+    default_frost_dates: { ...settings.default_frost_dates },
+    folders: { ...settings.folders },
+    templates: { ...settings.templates },
+    pot_presets: settings.pot_presets.map((preset) => ({ ...preset })),
+    calibration: cloneCalibration(settings.calibration),
+  };
+}
+
+function cloneCalibration(
+  calibration: Record<string, WeightCalibration>,
+): Record<string, WeightCalibration> {
+  return Object.fromEntries(
+    Object.entries(calibration).map(([id, value]) => [id, { ...value }]),
+  );
+}
+
+function mergeSettings(defaults: PluginSettings, saved: StoredSettings): PluginSettings {
+  if (!saved) {
+    return defaults;
+  }
+
+  if (saved.watering_method) {
+    defaults.watering_method = saved.watering_method;
+  }
+  if (typeof saved.bottom_watering_mode === "boolean") {
+    defaults.bottom_watering_mode = saved.bottom_watering_mode;
+  }
+  const flushMonths = coerceNumber(saved.flush_salts_every_months);
+  if (flushMonths !== null) {
+    defaults.flush_salts_every_months = flushMonths;
+  }
+  if (saved.fertiliser_policy) {
+    defaults.fertiliser_policy = saved.fertiliser_policy;
+  }
+  if (Array.isArray(saved.winter_months_uk)) {
+    defaults.winter_months_uk = [...saved.winter_months_uk];
+  }
+  if (typeof saved.lift_test_hints === "boolean") {
+    defaults.lift_test_hints = saved.lift_test_hints;
+  }
+  const rotationGap = coerceNumber(saved.rotation_gap_years);
+  if (rotationGap !== null) {
+    defaults.rotation_gap_years = rotationGap;
+  }
+  if (saved.default_frost_dates) {
+    defaults.default_frost_dates = {
+      ...defaults.default_frost_dates,
+      ...saved.default_frost_dates,
+    };
+  }
+  if (saved.folders) {
+    defaults.folders = { ...defaults.folders, ...saved.folders };
+  }
+  if (saved.templates) {
+    defaults.templates = { ...defaults.templates, ...saved.templates };
+  }
+  if (Array.isArray(saved.pot_presets)) {
+    defaults.pot_presets = saved.pot_presets.map((preset) => ({ ...preset }));
+  }
+  if (saved.calibration) {
+    defaults.calibration = cloneCalibration(saved.calibration as Record<string, WeightCalibration>);
+  }
+  return defaults;
+}
+
+function coerceNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim().length) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return null;
+}
+
 export default class HouseplantGardenPlugin extends Plugin {
   settings!: PluginSettings;
   index?: PlantIndex;
@@ -181,7 +265,9 @@ export default class HouseplantGardenPlugin extends Plugin {
   }
 
   async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    const saved = (await this.loadData()) as Partial<PluginSettings> | null;
+    const defaults = cloneSettings(DEFAULT_SETTINGS);
+    this.settings = mergeSettings(defaults, saved);
   }
 
   async saveSettings() {
