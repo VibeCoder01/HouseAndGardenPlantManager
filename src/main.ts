@@ -324,7 +324,7 @@ export default class HouseplantGardenPlugin extends Plugin {
   /** Create a new plant note from template. */
   async createPlant() {
     const selection = await new HouseplantCatalogModal(this.app).openAndGetChoice();
-    if (!selection) {
+    if (selection === null) {
       new Notice("Plant creation cancelled: no catalog selection made.");
       return;
     }
@@ -560,7 +560,7 @@ export default class HouseplantGardenPlugin extends Plugin {
       options,
       presets[0]?.name,
     );
-    if (!selection) {
+    if (selection === null) {
       new Notice("Plant creation cancelled: pot selection cancelled.");
       return null;
     }
