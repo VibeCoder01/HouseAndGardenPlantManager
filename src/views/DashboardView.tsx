@@ -143,8 +143,7 @@ export default class DashboardView extends ItemView {
 
     const locationSelect = filters.createEl("select", { cls: "pgm-dashboard-filter" });
     locationSelect.createEl("option", { value: "", text: "All locations" });
-    const locations = ["Living Room", ...new Set(this.plants.map((plant) => plant.location))];
-    for (const location of locations) {
+    for (const location of new Set(this.plants.map((plant) => plant.location))) {
       if (!location) continue;
       const option = locationSelect.createEl("option", { value: location, text: location });
       if (this.filterLocation === location) {
