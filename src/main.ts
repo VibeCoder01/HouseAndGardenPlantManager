@@ -1144,6 +1144,7 @@ class StringSuggestModal extends SuggestModal<string> {
   onOpen() {
     super.onOpen();
     this.explicitCancel = false;
+    this.titleEl.setText(this.promptText);
     this.setPlaceholder(this.promptText);
     if (this.initial) {
       this.inputEl.value = this.initial;
