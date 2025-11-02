@@ -13,7 +13,7 @@ export interface WateringComputation {
 }
 
 /** Determine if watering is due, using hints + checks + phase. */
-export function computeWaterDue(p: Plant, winterMonths: number[]): WateringComputation {
+export function computeWaterDue(p: Plant): WateringComputation {
   const today = todayYMD();
   const last = p.care?.water?.last;
   const hint = p.care?.water?.interval_days_hint ?? 7;
@@ -47,12 +47,14 @@ export function computeWaterDue(p: Plant, winterMonths: number[]): WateringCompu
     };
   }
 
-  const winterSuppressed = p.growth_phase === "quiescent" || winterMonths.includes(month);
+  const winterSuppressed = p.growth_phase === "quiescent" || isSeasonallySuppressed(p, month);
   if (winterSuppressed && diffDays < threshold + 2) {
+    const reason =
+      p.growth_phase === "quiescent" ? "Quiescent phase" : "Seasonal pause";
     return {
       due: false,
       status: "suppressed",
-      reason: "Winter suppression",
+      reason,
       daysSince: diffDays,
       threshold,
       nextDue,
@@ -111,4 +113,15 @@ function seasonalWaterFactor(p: Plant, month: number): number {
     }
   }
   return 1;
+}
+
+function isSeasonallySuppressed(p: Plant, month: number): boolean {
+  const overrides = p.seasonal_overrides ?? [];
+  for (const o of overrides) {
+    if (!o.months?.includes(month)) continue;
+    if (o.fertilise === "pause") {
+      return true;
+    }
+  }
+  return false;
 }
