@@ -320,7 +320,7 @@ export default class HouseplantGardenPlugin extends Plugin {
 
     const rotationGroup = await selectFromList(
       this.app,
-      "Rotation group",
+      "Which crop rotation family does this bed belong to? (e.g., brassicas, legumes)",
       ROTATION_FAMILIES,
       "misc",
     );
@@ -380,7 +380,8 @@ export default class HouseplantGardenPlugin extends Plugin {
       replacements,
     );
 
-    const filePath = `${this.settings.folders.beds}/${name}.md`;
+    const fileSlug = slug || id;
+    const filePath = `${this.settings.folders.beds}/${fileSlug}.md`;
     const alreadyExists = await this.app.vault.adapter.exists(filePath).catch(() => false);
     const file = await ensureFile(this.app.vault, filePath, template);
     if (alreadyExists) {
