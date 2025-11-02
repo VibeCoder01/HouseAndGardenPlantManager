@@ -37,7 +37,7 @@ type: plant
 common: {{common}}
 latin: {{latin}}
 acquired: {{date}}
-location:
+location: {{location}}
 light: {{light}}
 pet_safe: {{pet_safe}}
 env:
@@ -64,6 +64,8 @@ status: active
 ---
 # {{common}} ({{latin}})
 > {{summary}}
+
+- Location: {{location}}
 `;
 
 const FALLBACK_BED_TEMPLATE = `---
