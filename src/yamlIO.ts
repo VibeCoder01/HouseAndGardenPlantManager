@@ -27,10 +27,27 @@ export async function updateFileFrontMatter(app: App, file: TFile, updater: (fm:
 }
 
 /** Create a note from a path and content, making folders as needed. */
+async function ensureFolder(vault: Vault, dir: string): Promise<void> {
+  const normalised = normalizePath(dir);
+  if (!normalised.length) return;
+  const parts = normalised.split("/");
+  let current = "";
+  for (const part of parts) {
+    if (!part) continue;
+    current = current ? `${current}/${part}` : part;
+    const exists = await vault.adapter.exists(current);
+    if (!exists) {
+      await vault.createFolder(current);
+    } else if (exists === "file") {
+      throw new Error(`Cannot create folder '${dir}': '${current}' is a file.`);
+    }
+  }
+}
+
 export async function ensureFile(vault: Vault, path: string, content: string): Promise<TFile> {
   const np = normalizePath(path);
   const dir = np.split("/").slice(0, -1).join("/");
-  if (dir && !(await vault.adapter.exists(dir))) await vault.createFolder(dir);
+  if (dir) await ensureFolder(vault, dir);
   const exists = await vault.adapter.exists(np);
   if (exists) {
     const f = await vault.getAbstractFileByPath(np);
