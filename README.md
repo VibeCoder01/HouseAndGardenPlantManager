@@ -108,6 +108,10 @@ After updating settings, visit the Today view to verify the hints match your exp
 2. `npm run dev`
 3. Symlink or copy the repository into your vault’s plugins folder. The development build writes to `dist/` on changes.
 
+#### Git workflow tip
+
+When working off long-lived feature branches such as `work`, commit or stash local changes before running `git pull`. This repository tracks `package-lock.json`, so leaving an untracked copy in your working tree will cause pull operations to abort with “would be overwritten by merge” errors.
+
 ## Compatibility
 
 - Minimum Obsidian version: 1.5.0
