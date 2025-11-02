@@ -72,7 +72,7 @@ export interface Bed {
   tags?: string[];
 }
 
-export type TaskAction = "water" | "fertilise" | "prune" | "repot" | "custom";
+export type TaskAction = "water" | "fertilise" | "prune" | "repot" | "flush" | "custom";
 export interface PlantTask {
   type: "plant-task";
   plant_id: string;

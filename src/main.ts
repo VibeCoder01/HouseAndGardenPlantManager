@@ -22,7 +22,14 @@ import { PlantIndex } from "./indexer";
 import { ensureFile, readFrontMatter, updateFileFrontMatter } from "./yamlIO";
 import { addDays, todayYMD } from "./utils/dates";
 import { computeWaterDue, WateringComputation } from "./logic/watering";
-import { VIEW_TODAY, VIEW_TODAY_NAME } from "./constants";
+import {
+  VIEW_DASHBOARD,
+  VIEW_DASHBOARD_NAME,
+  VIEW_TODAY,
+  VIEW_TODAY_NAME,
+} from "./constants";
+import DashboardView from "./views/DashboardView";
+import { OpenMeteoClient } from "./services/climate/OpenMeteoClient";
 
 const FALLBACK_PLANT_TEMPLATE = `---
 id: {{id}}
@@ -180,6 +187,8 @@ export default class HouseplantGardenPlugin extends Plugin {
   settings!: PluginSettings;
   index?: PlantIndex;
   todayView?: TodayView;
+  dashboardView?: DashboardView;
+  climateClient = new OpenMeteoClient();
 
   async onload() {
     await this.loadSettings();
@@ -247,6 +256,14 @@ export default class HouseplantGardenPlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: "pgm-open-dashboard",
+      name: `Open ${VIEW_DASHBOARD_NAME}`,
+      callback: async () => {
+        await this.activateDashboardView();
+      },
+    });
+
     this.addSettingTab(new SettingsTab(this.app, this));
 
     this.registerView(VIEW_TODAY, (leaf) => {
@@ -255,13 +272,21 @@ export default class HouseplantGardenPlugin extends Plugin {
       return view;
     });
 
+    this.registerView(VIEW_DASHBOARD, (leaf) => {
+      const view = new DashboardView(leaf, this);
+      this.dashboardView = view;
+      return view;
+    });
+
     this.addRibbonIcon("leaf", "Open Today view", () => this.activateTodayView());
+    this.addRibbonIcon("calendar", `Open ${VIEW_DASHBOARD_NAME}`, () => this.activateDashboardView());
 
     await this.activateTodayView();
   }
 
   onunload() {
     this.app.workspace.detachLeavesOfType(VIEW_TODAY);
+    this.app.workspace.detachLeavesOfType(VIEW_DASHBOARD);
   }
 
   async loadSettings() {
@@ -276,6 +301,7 @@ export default class HouseplantGardenPlugin extends Plugin {
 
   private async refreshTodayView() {
     this.todayView?.requestRender();
+    this.dashboardView?.requestRender();
   }
 
   private async prompt(message: string, defaultValue = ""): Promise<string | null> {
@@ -900,6 +926,18 @@ performed: ${performed}
     const leaf = this.app.workspace.getRightLeaf(false) ?? this.app.workspace.getLeaf(true);
     if (!leaf) return;
     await leaf.setViewState({ type: VIEW_TODAY, active: true });
+    await this.app.workspace.revealLeaf(leaf);
+  }
+
+  async activateDashboardView() {
+    const leaves = this.app.workspace.getLeavesOfType(VIEW_DASHBOARD);
+    if (leaves.length) {
+      await this.app.workspace.revealLeaf(leaves[0]);
+      return;
+    }
+    const leaf = this.app.workspace.getLeftLeaf(false) ?? this.app.workspace.getLeaf(true);
+    if (!leaf) return;
+    await leaf.setViewState({ type: VIEW_DASHBOARD, active: true });
     await this.app.workspace.revealLeaf(leaf);
   }
 
