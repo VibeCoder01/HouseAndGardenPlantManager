@@ -338,6 +338,30 @@ export default class HouseplantGardenPlugin extends Plugin {
     return normalizedPath === normalizedPlantFolder || normalizedPath.startsWith(folderPrefix);
   }
 
+  private async getExistingPlantLocations(): Promise<string[]> {
+    if (!this.index) {
+      return [];
+    }
+    try {
+      const idx = await this.index.build();
+      const locations = new Set<string>();
+      for (const id in idx.plants) {
+        const entry = idx.plants[id];
+        const location = entry?.data?.location;
+        if (typeof location === "string") {
+          const trimmed = location.trim();
+          if (trimmed.length) {
+            locations.add(trimmed);
+          }
+        }
+      }
+      return Array.from(locations).sort((a, b) => a.localeCompare(b));
+    } catch (error) {
+      console.error("Failed to collect existing plant locations", error);
+      return [];
+    }
+  }
+
   private async prompt(message: string, defaultValue = ""): Promise<string | null> {
     const appAny = this.app as any;
     if (typeof appAny.prompt === "function") {
@@ -420,9 +444,11 @@ export default class HouseplantGardenPlugin extends Plugin {
     const pot = await this.choosePotForNewPlant();
     if (!pot) return;
 
-    const location = await this.promptNonEmpty(
+    const existingLocations = await this.getExistingPlantLocations();
+    const location = await this.promptLocation(
       "Where is this plant located?",
       "",
+      existingLocations,
       "Enter a location for the plant.",
       "Plant creation cancelled: location prompt cancelled.",
     );
@@ -731,6 +757,32 @@ export default class HouseplantGardenPlugin extends Plugin {
     let current = initial;
     while (true) {
       const input = await this.prompt(message, current);
+      if (input === null) {
+        new Notice(cancelNotice);
+        return null;
+      }
+      const trimmed = input.trim();
+      if (!trimmed) {
+        new Notice(errorNotice);
+        current = initial;
+        continue;
+      }
+      return trimmed;
+    }
+  }
+
+  private async promptLocation(
+    message: string,
+    initial: string,
+    options: string[],
+    errorNotice: string,
+    cancelNotice: string,
+  ): Promise<string | null> {
+    let current = initial;
+    const uniqueOptions = Array.from(new Set(options));
+    while (true) {
+      const modal = new LocationPromptModal(this.app, message, current, uniqueOptions);
+      const input = await modal.openAndGetValue();
       if (input === null) {
         new Notice(cancelNotice);
         return null;
@@ -1380,6 +1432,97 @@ class ConfirmModal extends Modal {
   }
 
   openAndGetValue(): Promise<boolean> {
+    return new Promise((resolve) => {
+      this.resolveFn = resolve;
+      this.open();
+    });
+  }
+}
+
+class LocationPromptModal extends Modal {
+  private resolveFn: ((value: string | null) => void) | null = null;
+  private result: string | null = null;
+  constructor(
+    app: App,
+    private message: string,
+    private initial: string,
+    private options: string[],
+  ) {
+    super(app);
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.createEl("h3", { text: this.message });
+
+    let select: HTMLSelectElement | null = null;
+    const selectOptions = this.options.filter((option) => option.trim().length);
+    const selectWrapper = selectOptions.length ? contentEl.createDiv() : null;
+    if (selectWrapper) {
+      select = selectWrapper.createEl("select");
+      select.createEl("option", { value: "", text: "Select existing location" });
+      for (const option of selectOptions) {
+        const opt = select.createEl("option", { value: option, text: option });
+        if (option === this.initial) {
+          opt.selected = true;
+        }
+      }
+    }
+
+    const inputWrapper = contentEl.createDiv();
+    const input = inputWrapper.createEl("input", { type: "text" });
+    input.value = this.initial;
+    input.focus();
+
+    select?.addEventListener("change", () => {
+      if (!select) return;
+      if (!select.value) return;
+      input.value = select.value;
+      input.focus();
+      const length = input.value.length;
+      input.setSelectionRange(length, length);
+    });
+
+    const actions = contentEl.createDiv({ cls: "pgm-modal-actions" });
+    const confirm = actions.createEl("button", {
+      text: "OK",
+      attr: { title: "Save this value and close the prompt." },
+    });
+    confirm.addEventListener("click", () => this.submit(input.value));
+    const cancel = actions.createEl("button", {
+      text: "Cancel",
+      attr: { title: "Dismiss the prompt without saving changes." },
+    });
+    cancel.addEventListener("click", () => this.submit(null));
+    input.addEventListener("keydown", (evt) => {
+      if (evt.key === "Enter") {
+        evt.preventDefault();
+        this.submit(input.value);
+      }
+      if (evt.key === "Escape") {
+        evt.preventDefault();
+        this.submit(null);
+      }
+    });
+  }
+
+  private submit(value: string | null) {
+    this.result = value;
+    this.close();
+  }
+
+  onClose() {
+    const { contentEl } = this;
+    contentEl.empty();
+    const resolve = this.resolveFn;
+    this.resolveFn = null;
+    const result = this.result;
+    this.result = null;
+    resolve?.(result);
+  }
+
+  openAndGetValue(): Promise<string | null> {
     return new Promise((resolve) => {
       this.resolveFn = resolve;
       this.open();
