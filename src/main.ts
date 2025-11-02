@@ -324,11 +324,17 @@ export default class HouseplantGardenPlugin extends Plugin {
   /** Create a new plant note from template. */
   async createPlant() {
     const selection = await new HouseplantCatalogModal(this.app).openAndGetChoice();
-    if (!selection) return;
+    if (!selection) {
+      new Notice("Plant creation cancelled: no catalog selection made.");
+      return;
+    }
     const selectedEntry = selection.kind === "entry" ? selection.entry : null;
     const chosenName = selection.kind === "entry" ? selection.entry.common : selection.name.trim();
     const common = chosenName || (await this.prompt("Common name?"))?.trim();
-    if (!common) return;
+    if (!common) {
+      new Notice("Plant creation cancelled: common name not provided.");
+      return;
+    }
     const today = todayYMD();
 
     const asciiName = common
@@ -358,6 +364,7 @@ export default class HouseplantGardenPlugin extends Plugin {
       "Where is this plant located?",
       "",
       "Enter a location for the plant.",
+      "Plant creation cancelled: location prompt cancelled.",
     );
     if (location === null) return;
 
@@ -415,6 +422,8 @@ export default class HouseplantGardenPlugin extends Plugin {
     }
     if (alreadyExists) {
       new Notice("Plant note already existed; opened existing file.");
+    } else {
+      new Notice(`Created plant note at ${file.path}.`);
     }
     await this.app.workspace.getLeaf(true).openFile(file);
     await this.refreshTodayView();
@@ -422,15 +431,30 @@ export default class HouseplantGardenPlugin extends Plugin {
 
   /** Create a new garden bed note from template. */
   async createBed() {
-    const name = await this.promptNonEmpty("Bed name?", "", "Enter a bed name.");
+    const name = await this.promptNonEmpty(
+      "Bed name?",
+      "",
+      "Enter a bed name.",
+      "Garden bed creation cancelled: name prompt cancelled.",
+    );
     if (name === null) return;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     const id = slug ? `bed-${slug}` : `bed-${todayYMD()}`;
 
-    const location = await this.promptNonEmpty("Where is the bed located?", "Garden", "Enter a location.");
+    const location = await this.promptNonEmpty(
+      "Where is the bed located?",
+      "Garden",
+      "Enter a location.",
+      "Garden bed creation cancelled: location prompt cancelled.",
+    );
     if (location === null) return;
 
-    const soil = await this.promptNonEmpty("Soil description?", "loam", "Enter a soil description.");
+    const soil = await this.promptNonEmpty(
+      "Soil description?",
+      "loam",
+      "Enter a soil description.",
+      "Garden bed creation cancelled: soil prompt cancelled.",
+    );
     if (soil === null) return;
 
     const rotationGroup = await selectFromList(
@@ -439,12 +463,18 @@ export default class HouseplantGardenPlugin extends Plugin {
       ROTATION_FAMILIES,
       "misc",
     );
-    if (!rotationGroup) return;
+    if (!rotationGroup) {
+      new Notice("Garden bed creation cancelled: rotation family not selected.");
+      return;
+    }
 
     let sizeValue: number | undefined;
     while (true) {
       const sizeInput = await this.prompt("Bed size (m²)? Leave blank to skip.", sizeValue ? String(sizeValue) : "");
-      if (sizeInput === null) return;
+      if (sizeInput === null) {
+        new Notice("Garden bed creation cancelled: bed size prompt cancelled.");
+        return;
+      }
       const trimmed = sizeInput.trim();
       if (!trimmed) {
         sizeValue = undefined;
@@ -466,7 +496,10 @@ export default class HouseplantGardenPlugin extends Plugin {
         "Last spring frost date? (YYYY-MM-DD)",
         frostDate,
       );
-      if (frostInput === null) return;
+      if (frostInput === null) {
+        new Notice("Garden bed creation cancelled: frost date prompt cancelled.");
+        return;
+      }
       const trimmed = frostInput.trim();
       if (!trimmed) {
         frostDate = defaultFrost;
@@ -508,6 +541,8 @@ export default class HouseplantGardenPlugin extends Plugin {
     }
     if (alreadyExists) {
       new Notice("Garden bed note already existed; opened existing file.");
+    } else {
+      new Notice(`Created garden bed note at ${file.path}.`);
     }
     await this.app.workspace.getLeaf(true).openFile(file);
   }
@@ -525,7 +560,10 @@ export default class HouseplantGardenPlugin extends Plugin {
       options,
       presets[0]?.name,
     );
-    if (!selection) return null;
+    if (!selection) {
+      new Notice("Plant creation cancelled: pot selection cancelled.");
+      return null;
+    }
     if (selection === "Custom dimensions…") {
       return this.promptCustomPot(presets[0]);
     }
@@ -538,6 +576,7 @@ export default class HouseplantGardenPlugin extends Plugin {
       "Pot diameter (mm)?",
       defaults?.diameter_mm ?? 120,
       "Enter a valid pot diameter in millimetres.",
+      "Plant creation cancelled: pot diameter prompt cancelled.",
     );
     if (diameter === null) return null;
 
@@ -545,6 +584,7 @@ export default class HouseplantGardenPlugin extends Plugin {
       "Pot volume (litres)?",
       defaults?.volume_l ?? 1,
       "Enter a valid pot volume in litres.",
+      "Plant creation cancelled: pot volume prompt cancelled.",
     );
     if (volume === null) return null;
 
@@ -552,6 +592,7 @@ export default class HouseplantGardenPlugin extends Plugin {
       "Potting medium mix?",
       defaults?.medium ?? "peat-free_multipurpose+perlite",
       "Enter a potting medium description.",
+      "Plant creation cancelled: potting medium prompt cancelled.",
     );
     if (medium === null) return null;
 
@@ -567,11 +608,15 @@ export default class HouseplantGardenPlugin extends Plugin {
     message: string,
     initial: number,
     errorNotice: string,
+    cancelNotice: string,
   ): Promise<number | null> {
     let current = String(initial);
     while (true) {
       const input = await this.prompt(message, current);
-      if (input === null) return null;
+      if (input === null) {
+        new Notice(cancelNotice);
+        return null;
+      }
       const trimmed = input.trim();
       if (!trimmed) {
         new Notice(errorNotice);
@@ -590,11 +635,15 @@ export default class HouseplantGardenPlugin extends Plugin {
     message: string,
     initial: string,
     errorNotice: string,
+    cancelNotice: string,
   ): Promise<string | null> {
     let current = initial;
     while (true) {
       const input = await this.prompt(message, current);
-      if (input === null) return null;
+      if (input === null) {
+        new Notice(cancelNotice);
+        return null;
+      }
       const trimmed = input.trim();
       if (!trimmed) {
         new Notice(errorNotice);
