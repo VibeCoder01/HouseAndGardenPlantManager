@@ -355,7 +355,7 @@ export default class HouseplantGardenPlugin extends Plugin {
         .join("-");
       slug = codepointSlug || today.replace(/-/g, "");
     }
-    const id = `hp-${slug}`;
+    const { slug: uniqueSlug, id } = await this.ensureUniquePlantIdentifiers(slug);
 
     const pot = await this.choosePotForNewPlant();
     if (!pot) return;
@@ -410,7 +410,7 @@ export default class HouseplantGardenPlugin extends Plugin {
       replacements,
     );
 
-    const filePath = `${this.settings.folders.plants}/${slug || id}.md`;
+    const filePath = `${this.settings.folders.plants}/${uniqueSlug}.md`;
     const alreadyExists = await this.app.vault.adapter.exists(filePath).catch(() => false);
     let file: TFile;
     try {
@@ -427,6 +427,37 @@ export default class HouseplantGardenPlugin extends Plugin {
     }
     await this.app.workspace.getLeaf(true).openFile(file);
     await this.refreshTodayView();
+  }
+
+  private isPlantIdInUse(id: string): boolean {
+    const files = this.app.vault.getMarkdownFiles();
+    for (const file of files) {
+      const cache = this.app.metadataCache.getFileCache(file);
+      const frontmatter: any = cache?.frontmatter;
+      if (frontmatter?.type === "plant" && typeof frontmatter.id === "string" && frontmatter.id === id) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private async ensureUniquePlantIdentifiers(initialSlug: string): Promise<{ slug: string; id: string }> {
+    const fallbackSlug = todayYMD().replace(/-/g, "");
+    const base = initialSlug || fallbackSlug;
+    let attempt = 0;
+    while (attempt < 1000) {
+      const suffix = attempt === 0 ? "" : `-${attempt + 1}`;
+      const candidateSlug = `${base}${suffix}`;
+      const candidateId = `hp-${candidateSlug}`;
+      const filePath = `${this.settings.folders.plants}/${candidateSlug}.md`;
+      const pathExists = await this.app.vault.adapter.exists(filePath).catch(() => false);
+      if (!pathExists && !this.isPlantIdInUse(candidateId)) {
+        return { slug: candidateSlug, id: candidateId };
+      }
+      attempt += 1;
+    }
+    const timestampSlug = `${base}-${Date.now()}`;
+    return { slug: timestampSlug, id: `hp-${timestampSlug}` };
   }
 
   /** Create a new garden bed note from template. */

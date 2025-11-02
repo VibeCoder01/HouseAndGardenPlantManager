@@ -108,8 +108,10 @@ export function computeWaterDue(p: Plant): WateringComputation {
 function seasonalWaterFactor(p: Plant, month: number): number {
   const overrides = p.seasonal_overrides ?? [];
   for (const o of overrides) {
-    if (o.months?.includes(month)) {
-      return o.water_factor ?? 1;
+    if (!o.months?.includes(month)) continue;
+    const factor = o.water_factor;
+    if (typeof factor === "number" && factor > 0) {
+      return factor;
     }
   }
   return 1;
@@ -119,7 +121,8 @@ function isSeasonallySuppressed(p: Plant, month: number): boolean {
   const overrides = p.seasonal_overrides ?? [];
   for (const o of overrides) {
     if (!o.months?.includes(month)) continue;
-    if (o.fertilise === "pause") {
+    const factor = o.water_factor;
+    if (typeof factor === "number" && factor <= 0) {
       return true;
     }
   }
