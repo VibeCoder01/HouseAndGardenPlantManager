@@ -4,7 +4,7 @@ House and Garden Plant Manager is an offline-first Obsidian plugin that helps yo
 
 ## Features
 
-- **Watering guidance** driven by moisture checks, growth phase, and seasonal overrides. The Today view groups plants into Overdue, Today, Soon, and Winter-suppressed buckets with quick actions.
+- **Watering guidance** driven by moisture checks, growth phase, and seasonal overrides. The Today's Watering view groups plants into Overdue, Today's Watering, Soon, and Winter-suppressed buckets with quick actions.
 - **Task logging** for watering and fertilising. Each log writes a dedicated note in the configured task folder for easy auditing.
 - **Weight calibration** prompts to store wet and ready-to-water pot weights per plant for reliable lift tests.
 - **Configurable pot presets** so new plant notes can start with the right container size and medium.
@@ -18,7 +18,7 @@ House and Garden Plant Manager is an offline-first Obsidian plugin that helps yo
 | ------- | ----------- |
 | Plant: New plant | Creates a plant note using the configured template, substituting the ID, name, and today’s date. |
 | Garden: New bed | Creates a garden bed note using the configured template, prompting for name, location, soil, and rotation group. |
-| Plant: Log water / Log feed | Updates the plant front matter, appends a task log note, and refreshes the Today view. Feeding honours winter and drought safeguards. |
+| Plant: Log water / Log feed | Updates the plant front matter, appends a task log note, and refreshes the Today's Watering view. Feeding honours winter and drought safeguards. |
 | Plant: Snooze task | Pushes the next watering hint forward by the number of days you provide. |
 | Plant: Calibrate pot weight | Stores wet and ready-to-water weights for the active plant. |
 | Plant: Move plant / Mark status | Prompts for a new location and status (active, dormant, gifted, dead). |
@@ -26,16 +26,16 @@ House and Garden Plant Manager is an offline-first Obsidian plugin that helps yo
 
 ## Views
 
-### Today view
+### Today's Watering view
 
 Open from the leaf ribbon icon or the command palette. The view contains:
 
 - **Overdue** – plants that exceeded their watering hint.
-- **Today** – plants hitting the hint interval today.
+- **Today's Watering** – plants hitting the hint interval today.
 - **Soon** – plants due within three days.
 - **Winter-suppressed** – quiescent or winter-suppressed plants, shown for awareness.
 
-Each entry shows the last logged watering date, the next hint, and buttons for logging water, logging feed, snoozing, or opening the note.
+Each entry shows the last logged watering date, the next hint, and buttons for logging water, logging feed, snoozing, or opening the note. Log feeding before you log watering if you need to capture both actions.
 
 ## Quick start
 
@@ -50,10 +50,10 @@ Each entry shows the last logged watering date, the next hint, and buttons for l
    - Run **Plant: New plant** from the command palette, supply the plant name, and confirm the suggested file path.
    - Review the generated front matter and tweak the pot size, watering interval hint, or tags before saving.
 5. **Log care tasks**
-   - From the Today view or the plant note, run **Plant: Log water** or **Plant: Log feed** to append a task note and update the next due hint.
+   - From the Today's Watering view or the plant note, run **Plant: Log water** or **Plant: Log feed** to append a task note and update the next due hint. If both actions are due, log feeding first and then log watering.
    - If you prefer weight-based watering, run **Plant: Calibrate pot weight** once per plant to store wet and ready-to-water baselines.
 
-Keep the Today view pinned for a dashboard of overdue, due-today, and upcoming tasks. Snooze hints from the view when a plant feels wetter than expected.
+Keep the Today's Watering view pinned for a dashboard of overdue, due-today, and upcoming tasks. Snooze hints from the view when a plant feels wetter than expected.
 
 ## Settings
 
@@ -63,7 +63,7 @@ Open *Settings → Community plugins → HaG-PM* to review every control. The se
 
 | Setting | Description |
 | ------- | ----------- |
-| **Watering method** | Choose between `top-until-runoff` and `bottom-soak`. The selection updates the hint text shown in plant notes and the Today view. |
+| **Watering method** | Choose between `top-until-runoff` and `bottom-soak`. The selection updates the hint text shown in plant notes and the Today's Watering view. |
 | **Flush salts every X months** | Sets a reminder interval for top-watering flushes when bottom watering is enabled. Enter `0` to disable the reminder. |
 | **Fertiliser policy** | Controls when fertiliser prompts appear: `active-only`, `always`, or `paused`. Winter months still suppress prompts unless you set `always`. |
 | **Winter months** | Configure which months count as winter in your region. The plugin pauses fertiliser suggestions during these months and highlights plants as winter-suppressed. |
@@ -91,7 +91,7 @@ Open *Settings → Community plugins → HaG-PM* to review every control. The se
 | ------- | ----------- |
 | **Weight calibration data** | Displays stored wet and ready-to-water weight values per plant. These records are maintained automatically after you run **Plant: Calibrate pot weight**. Use the trash icon next to a plant entry to reset its calibration. |
 
-After updating settings, visit the Today view to verify the hints match your expectations. You can tweak individual plants by editing their front matter without changing the global defaults.
+After updating settings, visit the Today's Watering view to verify the hints match your expectations. You can tweak individual plants by editing their front matter without changing the global defaults.
 
 ## Installation
 

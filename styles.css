@@ -9,6 +9,12 @@
   margin-bottom: 0.25rem;
 }
 
+.pgm-tip {
+  margin: 0;
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+
 .pgm-section {
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;

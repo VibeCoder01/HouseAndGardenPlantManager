@@ -2,7 +2,7 @@
 
 ## Plant creation omits location
 - Issue: The `createPlant` flow never asks for or injects a location value when building the replacements map for the template, so new notes keep the raw `{{location}}` placeholder (or an empty field in the fallback template).
-- Impact: Location is marked as a required field in the spec/schema, so generated notes violate the contract and the Today view will index plants with incomplete metadata.
+- Impact: Location is marked as a required field in the spec/schema, so generated notes violate the contract and the Today's Watering view will index plants with incomplete metadata.
 - Evidence: Missing `location` entry in the replacements object.【F:src/main.ts†L239-L313】 Template expects `{{location}}`.【F:Templates/plant.md†L1-L49】 Requirement that `location` is mandatory.【F:SPEC.md†L12-L55】
 
 ## Plant IDs break for non-Latin names

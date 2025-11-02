@@ -303,7 +303,7 @@ export default class HouseplantGardenPlugin extends Plugin {
       return view;
     });
 
-    this.addRibbonIcon("leaf", "Open Today view", () => this.activateTodayView());
+    this.addRibbonIcon("leaf", "Open Today's Watering view", () => this.activateTodayView());
     this.addRibbonIcon("calendar", `Open ${VIEW_DASHBOARD_NAME}`, () => this.activateDashboardView());
 
     await this.activateTodayView();
@@ -1099,8 +1099,14 @@ class TodayView extends ItemView {
       container.empty();
       container.addClass("pgm-today");
 
-      const title = container.createEl("h3", { text: "Today" });
+      const title = container.createEl("h3", { text: "Today's Watering" });
       title.addClass("pgm-heading");
+
+      container
+        .createEl("p", {
+          text: "Tip: Log feeding before logging watering if you need to record both for a plant.",
+        })
+        .addClass("pgm-tip");
 
       if (!this.plugin.index) {
         container.createSpan({ text: "Index unavailable yet." });
@@ -1137,7 +1143,7 @@ class TodayView extends ItemView {
       }
 
       this.renderSection(container, "Overdue", groups.overdue, true);
-      this.renderSection(container, "Today", groups.today, true);
+      this.renderSection(container, "Today's Watering", groups.today, true);
       this.renderSection(container, "Soon", groups.soon, false);
       this.renderSection(container, "Winter-suppressed", groups.suppressed, false);
 

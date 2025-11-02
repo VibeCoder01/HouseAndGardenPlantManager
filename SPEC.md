@@ -117,8 +117,9 @@ note: Slightly dry top 2 cm; pot felt light
 7. **Garden: Insert crop template** — insert sow/harvest windows and rotation family; warn on 3‑year conflict.
 
 ## Views
-### Today View
-- Sections: Overdue, Today, Soon, Winter-suppressed.
+### Today's Watering View
+- Sections: Overdue, Today's Watering, Soon, Winter-suppressed.
+- Display tip: "Log feeding before logging watering if you need to capture both."
 - Each item: {name, action, last, hint, quick buttons [Water, Feed, Snooze]}.
 
 ### Plants View (vNext, optional)
