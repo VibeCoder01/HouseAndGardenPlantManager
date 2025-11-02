@@ -1,4 +1,12 @@
-import { TFile, normalizePath, parseYaml, stringifyYaml, App, Vault } from "obsidian";
+import {
+  App,
+  TFile,
+  TFolder,
+  Vault,
+  normalizePath,
+  parseYaml,
+  stringifyYaml,
+} from "obsidian";
 
 /** Read front-matter block from a file's raw content. */
 export function readFrontMatter(content: string): any {
@@ -35,10 +43,12 @@ async function ensureFolder(vault: Vault, dir: string): Promise<void> {
   for (const part of parts) {
     if (!part) continue;
     current = current ? `${current}/${part}` : part;
-    const exists = await vault.adapter.exists(current);
-    if (!exists) {
+    const existing = vault.getAbstractFileByPath(current);
+    if (!existing) {
       await vault.createFolder(current);
-    } else if (exists === "file") {
+      continue;
+    }
+    if (existing instanceof TFile) {
       throw new Error(`Cannot create folder '${dir}': '${current}' is a file.`);
     }
   }
@@ -48,10 +58,12 @@ export async function ensureFile(vault: Vault, path: string, content: string): P
   const np = normalizePath(path);
   const dir = np.split("/").slice(0, -1).join("/");
   if (dir) await ensureFolder(vault, dir);
-  const exists = await vault.adapter.exists(np);
-  if (exists) {
-    const f = await vault.getAbstractFileByPath(np);
-    if (f && f instanceof TFile) return f;
+  const existing = vault.getAbstractFileByPath(np);
+  if (existing instanceof TFile) {
+    return existing;
+  }
+  if (existing instanceof TFolder) {
+    throw new Error(`Cannot create file '${np}': a folder already exists at this path.`);
   }
   return await vault.create(np, content);
 }

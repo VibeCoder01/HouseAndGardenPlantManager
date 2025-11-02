@@ -297,7 +297,14 @@ export default class HouseplantGardenPlugin extends Plugin {
 
     const filePath = `${this.settings.folders.plants}/${slug || id}.md`;
     const alreadyExists = await this.app.vault.adapter.exists(filePath).catch(() => false);
-    const file = await ensureFile(this.app.vault, filePath, template);
+    let file: TFile;
+    try {
+      file = await ensureFile(this.app.vault, filePath, template);
+    } catch (error) {
+      console.error("Failed to create plant note", error);
+      new Notice("Failed to create plant note. Check console for details.");
+      return;
+    }
     if (alreadyExists) {
       new Notice("Plant note already existed; opened existing file.");
     }
@@ -383,7 +390,14 @@ export default class HouseplantGardenPlugin extends Plugin {
     const fileSlug = slug || id;
     const filePath = `${this.settings.folders.beds}/${fileSlug}.md`;
     const alreadyExists = await this.app.vault.adapter.exists(filePath).catch(() => false);
-    const file = await ensureFile(this.app.vault, filePath, template);
+    let file: TFile;
+    try {
+      file = await ensureFile(this.app.vault, filePath, template);
+    } catch (error) {
+      console.error("Failed to create garden bed note", error);
+      new Notice("Failed to create garden bed note. Check console for details.");
+      return;
+    }
     if (alreadyExists) {
       new Notice("Garden bed note already existed; opened existing file.");
     }
@@ -559,11 +573,16 @@ action: ${action}
 performed: ${performed}
 ---
 `;
-    await ensureFile(
-      this.app.vault,
-      `${this.settings.folders.tasks}/${taskName}`,
-      taskContent,
-    );
+    try {
+      await ensureFile(
+        this.app.vault,
+        `${this.settings.folders.tasks}/${taskName}`,
+        taskContent,
+      );
+    } catch (error) {
+      console.error("Failed to create task log note", error);
+      new Notice("Failed to create task log note. Check console for details.");
+    }
     new Notice(`Logged ${action}.`);
     await this.refreshTodayView();
     return true;
