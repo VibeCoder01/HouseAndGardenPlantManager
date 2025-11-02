@@ -1121,17 +1121,36 @@ class TodayView extends ItemView {
 class StringSuggestModal extends SuggestModal<string> {
   private resolveFn: ((value: string | null) => void) | null = null;
   private settled = false;
+  private explicitCancel = false;
+
+  private handleKeydown = (evt: KeyboardEvent) => {
+    if (evt.key === "Escape") {
+      this.explicitCancel = true;
+    }
+  };
+
+  private handlePointerDown = (evt: PointerEvent) => {
+    const target = evt.target instanceof HTMLElement ? evt.target : null;
+    if (!target) return;
+    if (target.closest(".modal-close-button") || target.closest(".modal-bg")) {
+      this.explicitCancel = true;
+    }
+  };
+
   constructor(app: App, private promptText: string, private options: string[], private initial?: string) {
     super(app);
   }
 
   onOpen() {
     super.onOpen();
+    this.explicitCancel = false;
     this.setPlaceholder(this.promptText);
     if (this.initial) {
       this.inputEl.value = this.initial;
       this.inputEl.select();
     }
+    this.modalEl.addEventListener("keydown", this.handleKeydown);
+    document.body.addEventListener("pointerdown", this.handlePointerDown, true);
   }
 
   getSuggestions(query: string): string[] {
@@ -1152,17 +1171,35 @@ class StringSuggestModal extends SuggestModal<string> {
 
   onClose() {
     super.onClose();
+    this.modalEl.removeEventListener("keydown", this.handleKeydown);
+    document.body.removeEventListener("pointerdown", this.handlePointerDown, true);
     if (!this.settled) {
-      this.resolveFn?.(null);
+      if (!this.explicitCancel) {
+        const input = this.inputEl.value.trim();
+        if (input) {
+          const match = this.options.find((opt) => opt.toLowerCase() === input.toLowerCase());
+          if (match) {
+            this.resolveFn?.(match);
+          } else {
+            this.resolveFn?.(null);
+          }
+        } else {
+          this.resolveFn?.(null);
+        }
+      } else {
+        this.resolveFn?.(null);
+      }
     }
     this.resolveFn = null;
     this.settled = false;
+    this.explicitCancel = false;
   }
 
   openAndGetValue(): Promise<string | null> {
     return new Promise((resolve) => {
       this.resolveFn = resolve;
       this.settled = false;
+      this.explicitCancel = false;
       this.open();
     });
   }
