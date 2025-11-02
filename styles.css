@@ -65,3 +65,98 @@
   margin-top: 0.75rem;
   justify-content: flex-end;
 }
+
+.pgm-dashboard {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pgm-dashboard-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.pgm-dashboard-filter {
+  min-width: 12rem;
+}
+
+.pgm-dashboard-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pgm-month {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background-color: var(--background-primary-alt);
+  padding: 0.75rem;
+}
+
+.pgm-month-heading {
+  margin-bottom: 0.75rem;
+}
+
+.pgm-month-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pgm-month-table th,
+.pgm-month-table td {
+  padding: 0.5rem;
+  border-top: 1px solid var(--background-modifier-border);
+  vertical-align: top;
+}
+
+.pgm-month-table thead th {
+  border-top: none;
+  text-align: left;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.pgm-month-plant {
+  font-weight: 600;
+}
+
+.pgm-month-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pgm-task {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pgm-task strong {
+  font-size: 0.95rem;
+}
+
+.pgm-task-dates {
+  font-size: 0.85rem;
+  color: var(--text-accent);
+}
+
+.pgm-task-note {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.pgm-task-intensity {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.pgm-task-climate {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-faint);
+}
