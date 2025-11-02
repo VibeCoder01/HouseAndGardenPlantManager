@@ -1381,7 +1381,7 @@ class HouseplantCatalogModal extends SuggestModal<HouseplantCatalogChoice> {
       if (typed) {
         this.resolveFn?.({ kind: "custom", name: typed });
       } else {
-        this.resolveFn?.(null);
+        this.resolveFn?.({ kind: "custom", name: "" });
       }
     }
     this.resolveFn = null;
@@ -1485,7 +1485,7 @@ class GardenCatalogModal extends SuggestModal<GardenCatalogChoice> {
       if (typed) {
         this.resolveFn?.({ kind: "custom", name: typed });
       } else {
-        this.resolveFn?.(null);
+        this.resolveFn?.({ kind: "custom", name: "" });
       }
     }
     this.resolveFn = null;
