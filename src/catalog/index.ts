@@ -1,3 +1,6 @@
+import { HOUSEPLANT_CATALOG } from "./houseplants";
+import { GARDEN_PLANT_CATALOG } from "./gardenPlants";
+
 export { HOUSEPLANT_CATALOG } from "./houseplants";
 export { GARDEN_PLANT_CATALOG } from "./gardenPlants";
 export type {
@@ -10,10 +13,14 @@ export type {
 
 export function findHouseplantByName(name: string) {
   const normalised = name.trim().toLowerCase();
-  return HOUSEPLANT_CATALOG.find((entry) => entry.common.toLowerCase() === normalised);
+  return HOUSEPLANT_CATALOG.find(
+    (entry) => entry.common.toLowerCase() === normalised,
+  );
 }
 
 export function findGardenPlantByName(name: string) {
   const normalised = name.trim().toLowerCase();
-  return GARDEN_PLANT_CATALOG.find((entry) => entry.common.toLowerCase() === normalised);
+  return GARDEN_PLANT_CATALOG.find(
+    (entry) => entry.common.toLowerCase() === normalised,
+  );
 }
