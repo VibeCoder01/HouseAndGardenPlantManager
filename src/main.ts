@@ -576,9 +576,10 @@ export default class HouseplantGardenPlugin extends Plugin {
 
     const rotationGroup = await selectFromList(
       this.app,
-      "Which crop rotation family does this bed belong to? (e.g., brassicas, legumes)",
+      "Which crop rotation family does this bed belong to?",
       ROTATION_FAMILIES,
       "misc",
+      "Choose the plant family most recently grown here to help track rotation gaps (e.g., brassicas, legumes).",
     );
     if (!rotationGroup) {
       new Notice("Garden bed creation cancelled: rotation family not selected.");
@@ -1298,7 +1299,13 @@ class StringSuggestModal extends SuggestModal<string> {
     }
   };
 
-  constructor(app: App, private promptText: string, private options: string[], private initial?: string) {
+  constructor(
+    app: App,
+    private promptText: string,
+    private options: string[],
+    private initial?: string,
+    private description?: string,
+  ) {
     super(app);
   }
 
@@ -1307,6 +1314,13 @@ class StringSuggestModal extends SuggestModal<string> {
     this.explicitCancel = false;
     this.titleEl.setText(this.promptText);
     this.setPlaceholder(this.promptText);
+    if (this.description) {
+      const descriptionEl = this.contentEl.createEl("p", {
+        text: this.description,
+        cls: "pgm-modal-description",
+      });
+      descriptionEl.setAttr("aria-live", "polite");
+    }
     if (this.initial) {
       this.inputEl.value = this.initial;
       this.inputEl.select();
@@ -1372,8 +1386,9 @@ async function selectFromList(
   promptText: string,
   options: string[],
   initial?: string,
+  description?: string,
 ): Promise<string | null> {
-  const modal = new StringSuggestModal(app, promptText, options, initial);
+  const modal = new StringSuggestModal(app, promptText, options, initial, description);
   const result = await modal.openAndGetValue();
   return result;
 }
